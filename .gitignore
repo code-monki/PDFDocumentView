@@ -1,0 +1,48 @@
+# Build trees and generators
+build/
+build-*/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+DartConfiguration.tcl
+Testing/
+
+# Generated artifacts (adjust when packaging exists)
+dist/
+out/
+output/
+outputs/
+install/
+
+# Local caches and tooling
+.cache/
+.venv/
+venv/
+*.py[cod]
+
+# Operating system noise
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+Desktop.ini
+
+# Editor / IDE
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+*~
+.#*
+\#*\#
+
+# PDF corpora and substantive derived content (prefer fixtures policy in docs)
+*.pdf
+# Allow explicitly curated tiny fixtures only — uncomment when fixtures exist:
+# !tests/fixtures/minimal.pdf
