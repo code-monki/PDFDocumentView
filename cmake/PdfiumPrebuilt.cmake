@@ -133,6 +133,12 @@ function(_pdfdocumentview_download_extract_pdfium asset_file sha256_hex)
 endfunction()
 
 function(_pdfdocumentview_pdfium_host_cpu out_var)
+    # CI / integrators can force the prebuilt CPU selection via env (preferred on GitHub Actions
+    # because it avoids any ambiguity around CMake cache initialization ordering vs `project()`).
+    if(DEFINED ENV{PDFDOCUMENTVIEW_PREBUILT_CPU} AND NOT "$ENV{PDFDOCUMENTVIEW_PREBUILT_CPU}" STREQUAL "")
+        set("${out_var}" "$ENV{PDFDOCUMENTVIEW_PREBUILT_CPU}" PARENT_SCOPE)
+        return()
+    endif()
     # NOTE: `if(PDFDOCUMENTVIEW_CMAKE_ARCH)` is NOT a string-emptiness check. When the cache value is
     # something like `x86_64`, CMake re-parses that token as a *variable name* (`if(x86_64)`), so the
     # override silently fails and the wrong PDFium tarball can be selected. Always compare as a string.

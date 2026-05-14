@@ -86,7 +86,7 @@ jobs:
         if: matrix.variant == 'poppler-real'
         run: |
           sudo apt-get update
-          sudo apt-get install -y pkg-config libpoppler-qt6-dev
+          sudo apt-get install -y pkg-config libpoppler-qt6-dev libpoppler-dev
 
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
@@ -118,14 +118,9 @@ jobs:
         env:
           PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
           POPPLER_CMAKE_FLAGS: -DPDFDOCUMENTVIEW_RENDER_BACKEND=POPPLER -DPDFDOCUMENTVIEW_POPPLER_REAL=ON
+          PDFDOCUMENTVIEW_PREBUILT_CPU: ${{ matrix.cpu == 'arm64' && 'aarch64' || 'x86_64' }}
         run: |
           set -euo pipefail
-          ARCH_FLAGS=""
-          if [ "${{ matrix.cpu }}" = "arm64" ]; then
-            ARCH_FLAGS="-DPDFDOCUMENTVIEW_CMAKE_ARCH=aarch64"
-          else
-            ARCH_FLAGS="-DPDFDOCUMENTVIEW_CMAKE_ARCH=x86_64"
-          fi
           EXTRA_FLAGS=""
           if [ "${{ matrix.variant }}" = "poppler-real" ]; then
             EXTRA_FLAGS="${POPPLER_CMAKE_FLAGS}"
@@ -136,13 +131,14 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_PREFIX_PATH="${QT_ROOT_DIR}" \
-            ${ARCH_FLAGS} \
             ${EXTRA_FLAGS}
 
       - name: Build
         run: cmake --build build --parallel
 
       - name: Test
+        env:
+          QT_QPA_PLATFORM: minimal
         run: ctest --test-dir build --output-on-failure
 
       - name: Install-tree CMake consumer smoke
@@ -199,6 +195,7 @@ jobs:
       - name: Configure with PDFIUM_ROOT (fetch OFF)
         env:
           PDFIUM_ROOT: ${{ github.workspace }}/.cache/pdfium-linux-x64-root
+          PDFDOCUMENTVIEW_PREBUILT_CPU: x86_64
         run: |
           cmake -S . -B build-nofetch \
             -DCMAKE_BUILD_TYPE=Release \
@@ -209,6 +206,8 @@ jobs:
             -DPDFIUM_ROOT="${PDFIUM_ROOT}"
 
       - name: Build + test (no PDFium download at configure)
+        env:
+          QT_QPA_PLATFORM: minimal
         run: |
           cmake --build build-nofetch --parallel
           ctest --test-dir build-nofetch --output-on-failure
