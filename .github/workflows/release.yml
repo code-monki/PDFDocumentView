@@ -1,0 +1,55 @@
+# Skeleton release workflow — manual dispatch only. No repository secrets required.
+# Replace placeholder steps with your signing, versioning, and publication policy.
+
+name: Release (skeleton)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_hint:
+        description: "Display-only version hint for artifact names (no tagging performed)."
+        required: false
+        default: "0.0.0-local"
+
+jobs:
+  package-tgz:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt 6.11.2 (same baseline as CI)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.11.2"
+          cache: true
+          archives: qtbase
+          target: desktop
+          host: linux
+          arch: linux_gcc_64
+
+      - name: Configure (Release + CPack)
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${QT_ROOT_DIR}" \
+            -DPDFDOCUMENTVIEW_BUILD_EXAMPLES=ON \
+            -DPDFDOCUMENTVIEW_ENABLE_CPACK=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: CPack (TGZ)
+        working-directory: build
+        run: cpack -G TGZ
+
+      - name: Upload CPack artifacts (best-effort glob)
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdfdocumentview-cpack-${{ inputs.version_hint }}
+          path: |
+            build/*.tar.gz
+            build/*.tgz
+          if-no-files-found: warn

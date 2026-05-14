@@ -1,0 +1,45 @@
+# Doxyfile for PDFDocumentView — configured by CMake (@ONLY).
+# Prerequisite: Doxygen (https://www.doxygen.nl). HTML output only.
+
+PROJECT_NAME           = @CMAKE_PROJECT_NAME@
+PROJECT_NUMBER         = @PROJECT_VERSION@
+PROJECT_BRIEF          = "Embeddable Qt PDF page widget (public API under include/pdf_document_view/)."
+
+OUTPUT_DIRECTORY       = @PDFDOCUMENTVIEW_DOXYGEN_OUTPUT_DIR@
+CREATE_SUBDIRS         = NO
+ALLOW_UNICODE_NAMES    = YES
+OUTPUT_LANGUAGE        = English
+
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_NO_PARAMDOC       = NO
+
+INPUT                  = @PDFDOCUMENTVIEW_DOXYGEN_INPUT@
+FILE_PATTERNS          = *.hpp
+RECURSIVE              = YES
+EXCLUDE_SYMLINKS       = YES
+
+EXTENSION_MAPPING      = hpp=C++
+
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_PACKAGE        = NO
+EXTRACT_STATIC         = NO
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_LATEX         = NO
+GENERATE_XML           = NO
+GENERATE_MAN           = NO
+GENERATE_RTF           = NO
+
+HTML_COLORSTYLE_HUE    = 220
+
+SHOW_INCLUDE_FILES     = YES
+SHOW_USED_FILES        = YES
+
+SOURCE_BROWSER         = NO
+REFERENCED_BY_RELATION = NO
+REFERENCES_RELATION    = NO
+
+CLASS_GRAPH            = NO

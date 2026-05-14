@@ -1,0 +1,63 @@
+@PACKAGE_INIT@
+
+# Build-time selection this install tree was configured with (see README and ADR-0001).
+set(PDFDOCUMENTVIEW_RENDER_BACKEND "@PDFDOCUMENTVIEW_RENDER_BACKEND_EXPORT@")
+set(PDFDOCUMENTVIEW_HAVE_PDFIUM_RUNTIME @PDFDOCUMENTVIEW_CONFIG_HAVE_PDFIUM_RUNTIME@)
+
+# PDFIUM installs place the resolved libpdfium artifact next to the installed pdf_document_view
+# shared library (PDFDocumentView_Runtime): on Unix under CMAKE_INSTALL_LIBDIR with DT_NEEDED +
+# $ORIGIN / @loader_path; on Windows the prebuilt `pdfium.dll` is installed to
+# CMAKE_INSTALL_BINDIR and the import library (when present next to the prebuilt layout) to
+# CMAKE_INSTALL_LIBDIR.
+#
+# When PDFDOCUMENTVIEW_CONFIG_HAVE_PDFIUM_RUNTIME is enabled at PDFDocumentView configure time,
+# this package defines an imported **PDFDocumentView::PDFium** target (same name as in-tree
+# `cmake/PdfiumPrebuilt.cmake`), an alias **PDFDocumentView::Pdfium**, and appends
+# **$<LINK_ONLY:PDFDocumentView::PDFium>** to **PDFDocumentView::pdf_document_view** so consumers
+# linking the widget library also link the installed PDFium artifact. Poppler-only installs omit
+# **PDFDocumentView::PDFium** / **::Pdfium**.
+#
+# Relocation / tarball expectations (honest limits):
+# - The library is built so the loader resolves PDFium from the **same** install lib (Unix) or
+#   bin (Windows DLL search path) layout produced by `cmake --install` — not a magic hermetic
+#   single-`.so` tarball. If you repackage only `libpdf_document_view` without the co-installed
+#   PDFium shared library (CMake component `PDFDocumentView_PdfiumRuntime` when using PDFIUM),
+#   set `LD_LIBRARY_PATH`, `PATH`, or `DYLD_LIBRARY_PATH` / `@rpath` policy yourself, or keep both
+#   artifacts adjacent per the installed layout.
+# - CPack / custom archives: see README "CPack"; `PDFDOCUMENTVIEW_PACKAGE_COMPONENT_SET=RUNTIME_WITHOUT_SHIPPED_PDFIUM`
+#   excludes the shipped PDFium runtime from generated packages and from the install prefix (integrator supplies PDFium).
+# - Default CPack **TGZ** wires **PDFDocumentView_Runtime** to depend on **PDFDocumentView_PdfiumRuntime**
+#   so one archive includes the shipped PDFium unless **RUNTIME_WITHOUT_SHIPPED_PDFIUM** is selected at configure time.
+
+# Downstream consumers must make Qt 6 discoverable to CMake before
+# find_package(PDFDocumentView). The installed package does NOT hardcode any
+# Qt path; set CMAKE_PREFIX_PATH or Qt6_DIR to your Qt kit (the directory
+# containing Qt6Config.cmake, e.g. .../Qt/6.x.y/<platform-kit>) in your own
+# CMake cache, toolchain file, or environment. When configuring PDFDocumentView
+# from this source tree, root CMakeLists.txt appends ENV{QT_PREFIX} to
+# CMAKE_PREFIX_PATH; this installed package does not read QT_PREFIX—map it
+# yourself if you use that convention downstream.
+include(CMakeFindDependencyMacro)
+find_dependency(Qt6 REQUIRED COMPONENTS Widgets)
+
+include("${CMAKE_CURRENT_LIST_DIR}/PDFDocumentViewTargets.cmake")
+
+# PACKAGE_PREFIX_DIR is set by @PACKAGE_INIT@.
+if(@PDFDOCUMENTVIEW_CONFIG_HAVE_PDFIUM_RUNTIME@)
+    if(NOT TARGET PDFDocumentView::PDFium)
+        add_library(PDFDocumentView::PDFium SHARED IMPORTED GLOBAL)
+        set_target_properties(PDFDocumentView::PDFium PROPERTIES
+            IMPORTED_LOCATION "${PACKAGE_PREFIX_DIR}/@PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPORTED_LOCATION_SUBPATH@")
+        if(@PDFDOCUMENTVIEW_CONFIG_PDFIUM_HAVE_IMPLIB@)
+            set_target_properties(PDFDocumentView::PDFium PROPERTIES
+                IMPORTED_IMPLIB "${PACKAGE_PREFIX_DIR}/@PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPLIB_SUBPATH@")
+        endif()
+    endif()
+    if(NOT TARGET PDFDocumentView::Pdfium)
+        add_library(PDFDocumentView::Pdfium ALIAS PDFDocumentView::PDFium)
+    endif()
+    if(TARGET PDFDocumentView::pdf_document_view)
+        set_property(TARGET PDFDocumentView::pdf_document_view APPEND PROPERTY
+            INTERFACE_LINK_LIBRARIES "$<LINK_ONLY:PDFDocumentView::PDFium>")
+    endif()
+endif()

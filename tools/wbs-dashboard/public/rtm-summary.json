@@ -1,0 +1,21 @@
+{
+  "source": "docs/requirements-traceability-matrix.md",
+  "lastReviewed": "2026-05-13",
+  "note": "MVP governed RTM slice: minimum columns per ai-toolkit/09-traceability-guardrail §3; arch IDs; design/impl paths; CTest reverse map; NFR-001/002; honest partial validation (macOS CI, no coord/license automation). Not a full phase-gate matrix.",
+  "functionalRequirements": {
+    "count": 5,
+    "idPrefix": "FR",
+    "idStart": 1,
+    "idEnd": 5,
+    "implementationStatus": "partial-governed",
+    "owner": "RTM"
+  },
+  "nonFunctionalRequirements": {
+    "count": 2,
+    "idPrefix": "NFR",
+    "idStart": 1,
+    "idEnd": 2,
+    "implementationStatus": "partial-governed",
+    "owner": "RTM"
+  }
+}

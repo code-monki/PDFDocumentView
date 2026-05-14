@@ -2,6 +2,8 @@
 build/
 build-*/
 cmake-build-*/
+**/docs/api-html/
+docs/doxygen/html/
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
@@ -11,6 +13,9 @@ CTestTestfile.cmake
 DartConfiguration.tcl
 Testing/
 
+# Generated third-party notices (see tools/aggregate_pdfium_third_party_notices.py)
+docs/about/THIRD_PARTY_NOTICES.pdfium.md
+
 # Generated artifacts (adjust when packaging exists)
 dist/
 out/
@@ -19,6 +24,7 @@ outputs/
 install/
 
 # Local caches and tooling
+aqtinstall.log
 .cache/
 .venv/
 venv/
@@ -42,7 +48,8 @@ Desktop.ini
 .#*
 \#*\#
 
-# PDF corpora and substantive derived content (prefer fixtures policy in docs)
+# PDF corpora and substantive derived content (prefer tests/fixtures/README.md).
+# Covers e.g. gnu-c-language-manual.pdf at repo root for local dev (~1–2 MiB typical).
 *.pdf
-# Allow explicitly curated tiny fixtures only — uncomment when fixtures exist:
-# !tests/fixtures/minimal.pdf
+# Allow explicitly curated tiny fixtures only:
+!tests/fixtures/minimal-one-page.pdf

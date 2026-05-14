@@ -1,0 +1,356 @@
+{
+  "meta": {
+    "title": "PDFDocumentView — work breakdown",
+    "sourceDocs": [
+      "docs/concept-pdf-document-view.md (goals, layering, backends, demo policy)",
+      "AGENTS.md (widget library scope, governance under ai-toolkit/)",
+      "docs/adrs/0004-public-api-surface-freeze.md (0.1.x public API freeze)",
+      "docs/adrs/ (backend choice ADR-0001/0003; public API ADR-0004)",
+      "docs/rendering-threading.md (v1 GUI-thread full-page sync; mutex; future tiles/async)",
+      "docs/adrs/0002-render-threading-and-tiles-policy.md",
+      "docs/adrs/0003-split-packages-and-poppler-opt-in.md (default PDFium; Poppler opt-in; split package / COMPONENT intent)",
+      "cmake/PDFDocumentViewCPack.cmake (optional TGZ; Runtime→PdfiumRuntime dependency; PDFDOCUMENTVIEW_PACKAGE_COMPONENT_SET)",
+      "docs/widget-coordinate-contract.md (page space, layout vs device pixels, PageRenderRequest, TextMatch::pageRect → paint, host chrome)",
+      "docs/requirements-traceability-matrix.md (RTM-0.1: minimum schema columns, arch IDs, design/impl refs, CTest IDs, reverse test→FR map, NFR-001/002; partial-governed — not full lifecycle gate)",
+      "docs/doxygen/Doxyfile.in (Doxygen HTML API reference via CMake target docs)",
+      "docs/tutorial-pdf-document-view.md (embed widget, external search workflow, find_package)",
+      "ai-toolkit/02-governance/09-traceability-guardrail.md (RTM schema and lifecycle expectations)",
+      ".github/workflows/ci.yml (multi-arch matrix: macOS arm64+Intel, Ubuntu amd64+arm64, Windows amd64+arm64; Poppler on Ubuntu; job pdfium-root-no-fetch: PDFIUM_ROOT + fetch OFF + notices script)",
+      "docs/about/THIRD_PARTY_NOTICES.template.md (host About; prefix for aggregate notices)",
+      "tools/aggregate_pdfium_third_party_notices.py (THIRD_PARTY_NOTICES.pdfium.md from PDFIUM_ROOT/licenses)",
+      ".github/workflows/release.yml (workflow_dispatch CPack skeleton; no secrets)"
+    ],
+    "lastReviewed": "2026-05-13",
+    "criticalPathHint": "Backend rollup **closed** for original macOS MVP. **`#backend-followon`** children are **done** for this slice. **Still integrator / product scope (not repo bugs):** signed or notarized macOS **`.app`** / store packaging, fully hermetic relocatable tarballs without following install **`COMPONENT`** layout, separate **`PDFDocumentView-Poppler`** prefix packages. **Repo hygiene:** optional CPack **`TGZ`** + **`PDFDocumentView_PdfiumRuntime`** component; Windows fetch default **ON** with **`PDFDOCUMENTVIEW_FETCH_PDFIUM=OFF`** escape hatch. Steering: **`AGENTS.md`**, **`docs/concept-pdf-document-view.md`**, ADR-0004."
+  },
+  "roots": [
+    {
+      "id": "repo",
+      "name": "Repository layout & CMake package",
+      "status": "done",
+      "owner": "Build",
+      "notes": "Clear consumable target for downstream find_package / add_subdirectory.",
+      "children": [
+        {
+          "id": "repo-cmake",
+          "name": "CMake package / install rules for the library",
+          "status": "done",
+          "owner": "Build",
+          "notes": "Install + GNUInstallDirs; PDFDocumentViewConfig.cmake + PDFDocumentViewTargets (NAMESPACE PDFDocumentView::); option PDFDOCUMENTVIEW_INSTALL."
+        },
+        {
+          "id": "repo-headers",
+          "name": "Public headers under include/pdf_document_view/",
+          "status": "done",
+          "owner": "Build"
+        }
+      ]
+    },
+    {
+      "id": "backend",
+      "name": "Rendering backend choice & licensing",
+      "status": "done",
+      "owner": "Arch",
+          "notes": "**In-repo closure:** Default render engine (**PDFium**) + steering CMake/ADRs (`backend-engine-default`, `backend-steering-cmake`, `backend-adr`); pluggable backend spike + PDFium wiring (`backend-eval`); **macOS prebuilt** path links **`libpdfium.dylib`** via **`PDFDocumentView::PDFium`** (`cmake/PdfiumPrebuilt.cmake`, `src/CMakeLists.txt`). **Licensing / NOTICES for this repo’s scoped artifacts:** vendored minimum-revision legal bundle under **`third_party/pdfium/`** + ship-time install (`backend-license` subtree); compiled/prebuilt PDFium drop policy + aggregate **`NOTICES.pdfium-prebuilt.md`**, optional **`licenses/`** + tarball license mapping, maintainer docs (`backend-license-linked-binary`). **Explicit backlog (tracked children):** **`backend-followon`** — shipped for this branch (PDFium fetch/CI incl. Windows default ON, CMake install + consumer smoke, Poppler-Qt6 real + find + sync tiles, Windows PDFium install layout, optional CPack); **host scope:** signed product bundles, separate Poppler prefix packages. **Still on integrators / hosts** (not WBS “done”): About, release **`third-party-notices-<version>.md`**, counsel where **`PDFIUM_*`** lacks auto **`licenses/`** — ADR-0001 hypothesis + README.",
+      "children": [
+        {
+          "id": "backend-eval",
+          "name": "Spike pluggable backend behind narrow interface",
+          "status": "done",
+          "owner": "Arch",
+          "notes": "Internal `PdfRenderBackend` + real **`PdfiumBackend`** / `PopplerStubBackend` (or **PopplerQt** when `PDFDOCUMENTVIEW_POPPLER_REAL`); compile-time `createDefaultPdfRenderBackend()` from `PDFDOCUMENTVIEW_RENDER_BACKEND_*`; widget paints via backend. **PDFIUM** path links **`libpdfium`** privately (`cmake/PdfiumPrebuilt.cmake` + `${PDFIUM_LIBRARY}`)."
+        },
+        {
+          "id": "backend-engine-default",
+          "name": "Default render engine decision recorded (PDFium)",
+          "status": "done",
+          "owner": "Arch",
+          "notes": "ADR-0001 / concept: engine choice **Accepted**; CMake **links** **`PDFDocumentView::PDFium`** (bblanchon prebuilt or **`PDFIUM_*`** integrator paths) when **`PDFDOCUMENTVIEW_RENDER_BACKEND=PDFIUM`** on macOS default configuration (`cmake/PdfiumPrebuilt.cmake`)."
+        },
+        {
+          "id": "backend-steering-cmake",
+          "name": "CMake backend cache + LICENSE + notices template",
+          "status": "done",
+          "owner": "Build",
+          "notes": "PDFDOCUMENTVIEW_RENDER_BACKEND (PDFIUM|POPPLER), package config export, docs/third-party-notices.template.md, root MIT LICENSE, plus PDFDOCUMENTVIEW_PDFIUM_MINIMUM_GIT_SHA cache variable (defaulted from third_party/pdfium/REVISION via cmake/PDFiumMinimumRevision.cmake) echoed once at configure time; not a substitute for build revision + wire + shipped NOTICES."
+        },
+        {
+          "id": "backend-license",
+          "name": "Verify engine license and third-party notices for vendored minimum-revision snapshot",
+          "status": "done",
+          "owner": "Arch",
+          "notes": "**Chosen artifact for this phase = vendored upstream legal text bundle** under `third_party/pdfium/` at the minimum SHA `a84323421e94f484faca52dd9d027934eba42ab8` (canonical `REVISION`, exposed via CMake cache `PDFDOCUMENTVIEW_PDFIUM_MINIMUM_GIT_SHA`). Reference-revision verification and ship-time NOTICES for that bundle are complete (install rules wired via `PDFDOCUMENTVIEW_INSTALL` + `PDFDOCUMENTVIEW_RENDER_BACKEND=PDFIUM`). Linked prebuilt notices beyond that minimum snapshot are covered by **`backend-license-linked-binary`** (install + aggregate index + policy); compiled-artifact obligations for the **host product** still follow ADR-0001 **Hypothesis** where applicable.",
+          "children": [
+            {
+              "id": "backend-license-verify-ref",
+              "name": "Reference-revision verification of PDFium upstream LICENSE",
+              "status": "done",
+              "owner": "Arch",
+              "notes": "Fetched upstream LICENSE and latest-commit JSON; recorded SHA a84323421e94f484faca52dd9d027934eba42ab8 and structure (BSD-3-Clause-style PDFium-authors block + Apache-2.0) in docs/engine-verification.md and docs/third-party-notices.md; ADR-0001 verification table updated."
+            },
+            {
+              "id": "backend-license-ship-notices",
+              "name": "Ship-time NOTICES for vendored PDFium minimum-revision snapshot",
+              "status": "done",
+              "owner": "Release",
+              "notes": "**Narrow slice done (2026-05-13):** verbatim `LICENSE` + `AUTHORS` for **minimum** SHA `a84323421e94f484faca52dd9d027934eba42ab8` under `third_party/pdfium/`; `NOTICE`/`COPYING` absent at this SHA (404); CMake installs to `${CMAKE_INSTALL_DOCDIR}/pdfdocumentview/third_party/pdfium` when PDFIUM + install on; minimum SHA echoed once at configure time via `PDFDOCUMENTVIEW_PDFIUM_MINIMUM_GIT_SHA`. Newer upstream revisions remain permitted for external sources; refresh `third_party/pdfium/REVISION` + legal files together. Does **not** cover transitive deps or a compiled PDFium artifact — see ADR-0001 Status (hypothesis for linked binary)."
+            }
+          ]
+        },
+        {
+          "id": "backend-license-linked-binary",
+          "name": "Ship-time NOTICES for compiled / linked PDFium artifact (transitive deps, DEPS, About)",
+          "status": "done",
+          "owner": "Release",
+          "notes": "**Repo closure (2026-05-13 update):** CMake installs aggregate **`NOTICES.pdfium-prebuilt.md`** (from **`docs/notices/pdfium-prebuilt-NOTICES.md`**) whenever PDFIUM + install; tarball **`LICENSE`** → **`LICENSE.pdfium-binary-drop`** when **`PDFIUM_PREBUILT_LICENSE_FILE`** is set; **`licenses/`** subtree when present on **`PDFIUM_FETCH_EXTRACT_ROOT`** / **`PDFIUM_ROOT`** at configure. Maintainer inventory + **`DEPS`** vs **binary-drop** scope in **`docs/shipped-third-party-notices-pdfium-prebuilt.md`** / ADR-0001; host template **`docs/about/THIRD_PARTY_NOTICES.template.md`**. **Optional aggregate markdown:** **`tools/aggregate_pdfium_third_party_notices.py`** and CMake target **`aggregate-pdfium-third-party-notices`** when **`PDFDOCUMENTVIEW_ENABLE_CPACK=ON`** and **`licenses/`** exists on the resolved prebuilt root. **Still on integrators / host apps (not claimed done here):** **`PDFIUM_INCLUDE_DIR`+`PDFIUM_LIBRARY`** without layout root → no auto **`licenses/`**; air-gapped builds set **`PDFDOCUMENTVIEW_FETCH_PDFIUM=OFF`**; **`find_package`** may embed absolute paths; product **About** text, release **`third-party-notices-<version>.md`**, and counsel where needed."
+        },
+        {
+          "id": "backend-adr",
+          "name": "ADR: split packages / Poppler opt-in (default engine decided)",
+          "status": "done",
+          "owner": "PM",
+          "notes": "**Policy ADR accepted (2026-05-13):** `docs/adrs/0003-split-packages-and-poppler-opt-in.md` — default **PDFium**; **Poppler** opt-in build/distribution flavor with **GPL-style obligations** on integrators who ship in-process Poppler (exact terms = upstream pin + stack + counsel; not asserted here). Documents **split package** options: single-prefix one-backend vs **CMake COMPONENT** sketch (`PDFDocumentView_Runtime` / `Development` / optional Poppler-only component) vs **separate install prefix** / CPack package (`PDFDocumentView` vs `PDFDocumentView-Poppler`). **Consequences:** hosts ship **matching** notices; no repo guarantee that proprietary + in-process Poppler is permissible. **Implementation partial:** stub Poppler only; install rules do not yet split COMPONENTs — README + concept point at ADR-0003; WBS `meta.sourceDocs` lists ADR. See ADR-0001."
+        },
+        {
+          "id": "backend-followon",
+          "name": "Backend follow-on — post–macOS MVP (tracked backlog)",
+          "status": "done",
+          "owner": "Arch",
+          "notes": "**Closed for tracked children (2026-05-13):** Linux PDFium fetch + **ubuntu-latest** matrix (PDFIUM + **Poppler REAL** with `libpoppler-qt6-dev`); install-prefix **consumer smoke**; PDFium **PRIVATE** + staged runtime + **COMPONENT**s incl. **`PDFDocumentView_PdfiumRuntime`**; **Poppler-Qt6** real path + **`Page::search`** find + **GUI-thread** **`renderPageTile`** (`capabilities().tileRendering` true) + **optional async tiles** (same `PdfTileRenderWorker` as PDFium; `capabilities().asyncTileRendering` true on REAL builds). **Deferred / host scope:** signed macOS product bundles, separate Poppler-only **prefix** tarballs. **Dashboard / PM tag:** `#backend-followon`.",
+          "meta": {
+            "sourceDocs": [
+              "docs/adrs/0003-split-packages-and-poppler-opt-in.md",
+              "cmake/PdfiumPrebuilt.cmake",
+              "docs/off-mac-pdfium-build.md",
+              "README.md"
+            ]
+          },
+          "children": [
+            {
+              "id": "backend-followon-pdfium-nonmacos",
+              "name": "PDFium fetch / prebuilt / CI parity off macOS",
+              "status": "done",
+              "owner": "Build",
+              "notes": "**Shipped:** `cmake/PdfiumPrebuilt.cmake` pins **Linux glibc x64/arm64** (+ optional **musl**) and **Windows** tarballs with SHA-256; Linux defaults **fetch ON**; **`.github/workflows/ci.yml`** adds **ubuntu-latest** using public GitHub assets (no secrets). Integrator/musl/armv7: **`docs/off-mac-pdfium-build.md`**. **Dashboard / PM tag:** `#backend-followon-pdfium-nonmacos`.",
+              "meta": {
+                "sourceDocs": [
+                  "cmake/PdfiumPrebuilt.cmake",
+                  ".github/workflows/ci.yml",
+                  "docs/off-mac-pdfium-build.md",
+                  "docs/adrs/0001-pdf-engine-license-and-third-party-notices.md"
+                ]
+              }
+            },
+            {
+              "id": "backend-followon-cmake-imported-targets",
+              "name": "Imported targets + find_package portability across hosts",
+              "status": "done",
+              "owner": "Build",
+              "notes": "**Done (2026-05-13):** `pdf_document_view` **SHARED**; PDFium **PRIVATE**; Unix installs **`libpdfium`** beside the `.so`/`.dylib` under `CMAKE_INSTALL_LIBDIR` as **`PDFDocumentView_PdfiumRuntime`** (widget remains **`PDFDocumentView_Runtime`**); **Windows** installs **`pdfium.dll`** to **`CMAKE_INSTALL_BINDIR`** (`PdfiumRuntime`), optional **`pdfium.lib`** to **`CMAKE_INSTALL_LIBDIR`** (`Development`). **`PDFDocumentViewConfig.cmake.in`** defines **`PDFDocumentView::PDFium`**, alias **`PDFDocumentView::Pdfium`**, and **`$<LINK_ONLY:PDFDocumentView::PDFium>`** on **`pdf_document_view`** when **`PDFDOCUMENTVIEW_PACKAGE_COMPONENT_SET=FULL`**. CPack **TGZ**: **`PDFDocumentView_Runtime`** depends on **`PDFDocumentView_PdfiumRuntime`** unless **`RUNTIME_WITHOUT_SHIPPED_PDFIUM`**. Basic demo: **RPATH** to **`pdf_document_view`** (no **`install_name_tool`** on the app). **Consumer smoke:** `tests/cmake_consumer_smoke/` + CI install step (macOS + Ubuntu PDFIUM). Optional CPack: **`cmake/PDFDocumentViewCPack.cmake`**. **Dashboard / PM tag:** `#backend-followon-cmake-imported-targets`.",
+              "meta": {
+                "sourceDocs": [
+                  "CMakeLists.txt",
+                  "cmake/PdfiumPrebuilt.cmake",
+                  "cmake/PDFDocumentViewConfig.cmake.in",
+                  "cmake/PDFDocumentViewCPack.cmake",
+                  "examples/basic/CMakeLists.txt",
+                  "docs/adrs/0001-pdf-engine-license-and-third-party-notices.md",
+                  "docs/adrs/0003-split-packages-and-poppler-opt-in.md",
+                  "docs/legal-integration-checklist.md"
+                ]
+              }
+            },
+            {
+              "id": "backend-followon-poppler",
+              "name": "Real Poppler backend + optional COMPONENT split (ADR-0003)",
+              "status": "done",
+              "owner": "Arch",
+              "notes": "**Done (2026-05-13 slice):** optional **Poppler-Qt6** (`pkg-config poppler-qt6`, **`PDFDOCUMENTVIEW_POPPLER_REAL=ON`**) — file + buffer open, full-page render, **`Poppler::Page::search`** → **`findTextMatches`**, **`PopplerQtBackend::renderPageTile`** for GUI-thread tiles (**`capabilities().tileRendering` = true**), detached **`renderPageTile(QByteArray, …)`** for async worker parity with PDFium (**`capabilities().asyncTileRendering` = true**). Stub when REAL=OFF unchanged. **CI:** **ubuntu-latest** matrix leg **`libpoppler-qt6-dev`** + POPPLER REAL configure/build/ctest/consumer smoke. **COMPONENT** + optional CPack per ADR-0003 / README; separate **`PDFDocumentView-Poppler`** prefix remains deferred. **Dashboard / PM tag:** `#backend-followon-poppler`.",
+              "meta": {
+                "sourceDocs": [
+                  "docs/adrs/0003-split-packages-and-poppler-opt-in.md",
+                  "docs/adrs/0001-pdf-engine-license-and-third-party-notices.md",
+                  "README.md",
+                  "src/poppler_qt_backend.cpp",
+                  ".github/workflows/ci.yml"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layers",
+      "name": "Core layers (document, render, text/find, capabilities)",
+      "status": "done",
+      "owner": "Arch",
+      "notes": "**Rollup:** All layer children `done` (document, render service, find, capabilities) for the current PDFium MVP; backend-specific gaps stay under `backend` / capabilities flags.",
+      "children": [
+        {
+          "id": "layer-doc",
+          "name": "Document model — open path/buffer, page count, errors",
+          "status": "done",
+          "owner": "Arch",
+          "notes": "**Done:** public API `include/pdf_document_view/pdf_document_model.hpp`; PDFium impl `src/pdfium_document_model.cpp` (+ header); factory `src/create_default_pdf_document_model.cpp`. Widget wiring + signals in `include/pdf_document_view/pdf_document_view_widget.hpp` / `src/pdf_document_view_widget.cpp`. README **Document model** + `docs/concept-pdf-document-view.md` §4."
+        },
+        {
+          "id": "layer-render",
+          "name": "Render service — page index, scale, optional tiles, threading policy",
+          "status": "done",
+          "owner": "Arch",
+          "notes": "**Rollup:** Tiles/async MVP shipped (`layer-render-tiles`, `layer-render-async`); v1 full-page sync remains when tiles/async are off or unsupported. Further perf work = new scope, not open under this node.",
+          "children": [
+            {
+              "id": "layer-render-doc",
+              "name": "Document render threading policy (v1 sync, mutex, non-goals, reconsideration gates)",
+              "status": "done",
+              "owner": "Arch",
+              "notes": "`docs/rendering-threading.md`, ADR-0002, concept doc pointer, README link."
+            },
+            {
+              "id": "layer-render-api",
+              "name": "Public render-service API (tile rects, scale contract, threading contract in headers)",
+              "status": "done",
+              "owner": "Arch",
+              "notes": "**MVP slice done:** `include/pdf_document_view/page_render_request.hpp` + `PdfRenderBackend::renderPage` + optional `renderPageTile` default (see `src/pdf_render_backend.hpp`); threading policy in `docs/rendering-threading.md` / ADR-0002. **Async MVP** shipped under `layer-render-async`."
+            },
+            {
+              "id": "layer-render-tiles",
+              "name": "Tile-based rendering (cache, partial invalidation, progressive paint)",
+              "status": "done",
+              "owner": "Arch",
+              "notes": "**MVP shipped (PDFium + Poppler Qt6 REAL):** 512px device tiles, LRU 64 (`src/pdf_tile_cache.hpp`), `PdfiumBackend::renderPageTile` + matrix clip; **`PopplerQtBackend::renderPageTile`** (Poppler **`Page::renderToImage`** region); widget `tileRenderingEnabled` + `capabilities().tileRendering` gate, `QTimer::singleShot` one-tile-per-turn drain on GUI thread (`docs/rendering-threading.md`). **Async** uses the same `PdfTileRenderWorker` when enabled (PDFium + Poppler REAL). Demo: View → tile toggle when `capabilities().tileRendering`."
+            },
+            {
+              "id": "layer-render-async",
+              "name": "Background-thread tile raster + safe delivery to GUI thread",
+              "status": "done",
+              "owner": "Arch",
+              "notes": "**MVP shipped (PDFium + Poppler Qt6 REAL, flag default OFF):** `PdfTileRenderWorker` + `PdfTileRenderThread`, `TileJob` queue, per-job isolated document load (PDFium `FPDF_LoadMemDocument64` / file + close; Poppler **`Poppler::Document::load` / `loadFromData`**), `tileReady` → GUI via `Qt::QueuedConnection`, `m_renderGeneration` + `purgeQueue`, `docs/rendering-threading.md` §Async MVP. Poppler **stub:** no tile worker / `asyncTileRendering` false. Demo: View → Async tile rendering."
+            }
+          ]
+        },
+        {
+          "id": "layer-find",
+          "name": "Text / find — quads in page coordinates for overlay and scroll-to",
+          "status": "done",
+          "owner": "Arch",
+          "notes": "**MVP done (PDFium):** `PdfiumBackend::findTextMatches` fills `TextMatch` with **top-down page rects** (1/72 in, same basis as `pageSize()` / `pageToDeviceMatrix` via `pdfUserRectToPageTopDown`). Widget: `findText` (trimmed query), `findMatches` / `findCurrentIndex` / `currentFindMatch`, `findNext` / `findPrevious`, `scrollToFindMatch(int|TextMatch)`, built-in highlights + `findResultsChanged`. **External index:** `revealPageRect` / `navigateToHostSearchHit` (same page rect space, shared scroll math with find). **`openDocumentAndRevealSearchHit`** — open path + same scroll/highlight + best-effort find list without clobbering host rect. **Hosts:** custom overlays = read `findMatches()` + `currentFindMatch()` (no extra signal). **Poppler (Qt6, `PDFDOCUMENTVIEW_POPPLER_REAL`):** `PopplerQtBackend::findTextMatches` uses **`Poppler::Page::search`** with the same **top-down** `TextMatch::pageRect` convention; **`capabilities().textSearch` true**; Poppler **stub** still has no search."
+        },
+        {
+          "id": "layer-cap",
+          "name": "Capabilities flags — honest parity per backend",
+          "status": "done",
+          "owner": "Arch",
+          "notes": "**MVP:** `pdf_capabilities.hpp` + `PdfRenderBackend::capabilities()` / `PdfDocumentViewWidget::capabilities()` (buffer flag intersects `PdfDocumentModel::supportsOpenBuffer()`; **tileRendering** intersects widget `tileRenderingEnabled`; **asyncTileRendering** intersects widget `asyncTileRenderingEnabled`). Extend flags when backends diverge further (e.g. forms, annotations)."
+        }
+      ]
+    },
+    {
+      "id": "widget-api",
+      "name": "Embeddable QWidget API & coordinate contract",
+      "status": "done",
+      "owner": "Arch",
+      "notes": "**Done (2026-05-13):** Public API freeze **`docs/adrs/0004-public-api-surface-freeze.md`** for **0.1.x** (headers under `include/pdf_document_view/`, widget methods/signals, supporting structs; semver: PATCH/MINOR/MAJOR). Coordinate contract **`docs/widget-coordinate-contract.md`** (page space, layout vs device pixels, scroll/viewport, `PageRenderRequest`, `TextMatch::pageRect` → paint). **2026-05-13 follow-up:** `revealPageRect` / `navigateToHostSearchHit` for host/external search scroll-to. **2026-05-13:** `openDocumentAndRevealSearchHit` (path + term + page rect). README + concept pointers; headers hedging language aligned with ADR-0004.",
+      "children": [
+        {
+          "id": "widget-placeholder",
+          "name": "Placeholder PdfDocumentViewWidget compiles and embeds",
+          "status": "done",
+          "owner": "Arch"
+        },
+        {
+          "id": "widget-render-wire",
+          "name": "Wire widget paint path to backend raster",
+          "status": "done",
+          "owner": "Arch",
+          "notes": "**Done (2026-05-13):** Full-page cache and GUI-thread tiles call `PdfRenderBackend::renderPage` / `renderPageTile` on the live model; async tile worker calls the detached `renderPageTile(QByteArray, QString, …)` overload on **`PdfiumBackend`** or **`PopplerQtBackend`** (no engine calls from `PdfDocumentViewWidget` / `PdfTileRenderWorker` beyond the virtual). Widget keeps layout/scroll/DPR mapping only."
+        },
+        {
+          "id": "widget-overlay",
+          "name": "Host highlight overlays (page coordinates) + find overlays",
+          "status": "done",
+          "owner": "Arch",
+          "notes": "**MVP done (2026-05-13):** `PageHighlight` in `page_highlight.hpp`; `setPageHighlights` / `clearPageHighlights` / `pageHighlights()` on `PdfDocumentViewWidget`. Z-order: PDF raster → host highlights → find highlights. Find remains separate; demo View → Demo overlay."
+        }
+      ]
+    },
+    {
+      "id": "demo-ci",
+      "name": "Minimal demo, CI, and fixtures",
+      "status": "done",
+      "owner": "Build",
+      "notes": "**Done (2026-05-13):** Basic demo harness in **`examples/basic/main.cpp`** (construct widget, open/close via `setDocumentPath`, navigation, zoom/fit, PDFium tile + async toggles, find, demo highlights, status wiring). CI via **`.github/workflows/ci.yml`** (multi-arch matrix per **`ci-smoke`**, Qt **6.11.2**, Release, examples on, `ctest --output-on-failure`). Licensed-style synthetic fixture **`tests/fixtures/minimal-one-page.pdf`** plus smoke tests: **`pdf_document_fixture_smoke`**, **`pdf_document_model_smoke`**, **`pdf_document_view_reveal_smoke`** (`revealPageRect` / `navigateToHostSearchHit` / `openDocumentAndRevealSearchHit`), **`pdf_widget_async_tile_capability_smoke`**.",
+      "children": [
+        {
+          "id": "demo-basic",
+          "name": "examples/basic — construct widget, open file, exercise APIs",
+          "status": "done",
+          "owner": "Build",
+          "notes": "**Done:** File Open… / Close document / Quit → `setDocumentPath` (non-empty path or clear). Navigate → `nextPage` / `previousPage` / `setCurrentPageIndex`. View → `setZoom` / `resetZoom` / `fitWidth`, `setTileRenderingEnabled` / `setAsyncTileRenderingEnabled` (tile actions when `capabilities().tileRendering` / `asyncTileRendering` and doc has pages). Search → `findText`, `findNext`, `findPrevious`, `clearFind`. View → Demo overlay → `setPageHighlights` / `clearPageHighlights` (`PageHighlight` on page 2 when available). `viewStateChanged` / `findResultsChanged` drive status and action enablement. **Out of scope for this binary:** `openDocumentBuffer`; explicit `capabilities()` read (integrators should use it); host-owned persistence and app chrome beyond this harness."
+        },
+        {
+          "id": "ci-smoke",
+          "name": "CI smoke build of library + demo",
+          "status": "done",
+          "owner": "Build",
+          "notes": "**GitHub Actions:** **`.github/workflows/ci.yml`** — `push` / `pull_request`, **ci-multiarch** matrix: **`macos-15`** (arm64) + **`macos-15-intel`** (x86_64 PDFIUM), **`ubuntu-24.04`** + **`ubuntu-24.04-arm`** (PDFIUM + **Poppler REAL** with **`libpoppler-qt6-dev`**), **`windows-latest`** + **`windows-11-arm`** (PDFIUM; Qt **`win64_msvc2022_64`** / **`win64_msvc2022_arm64`** + hosts **`windows`** / **`windows_arm64`** per **install-qt-action**). PDFium fetch + optional **`PDFDOCUMENTVIEW_CMAKE_ARCH`** override in **`cmake/PdfiumPrebuilt.cmake`**. Qt **6.11.2**, optional **ccache**, CMake **Release** + **`PDFDOCUMENTVIEW_BUILD_EXAMPLES=ON`**, **`ctest --output-on-failure`**, install-prefix **`tests/cmake_consumer_smoke`**. **Extra job `pdfium-root-no-fetch`:** **`actions/cache`** of extracted linux-x64 prebuilt, **`PDFDOCUMENTVIEW_FETCH_PDFIUM=OFF`** + **`PDFIUM_ROOT`**, CTest, smoke **`tools/aggregate_pdfium_third_party_notices.py`**."
+        },
+        {
+          "id": "tests-fixtures",
+          "name": "Automated tests with synthetic or clearly licensed tiny PDFs",
+          "status": "done",
+          "owner": "Build",
+          "notes": "**Done:** Synthetic fixture `tests/fixtures/minimal-one-page.pdf` (~345 B, PDF 1.1, one blank page). CTest **`pdf_document_fixture_smoke`** (PDFium-only target) opens it via `createDefaultPdfDocumentModel()->openFile` with `FIXTURE_PDF_PATH` from CMake; optional `argv[1]` override. **`pdf_document_view_reveal_smoke`** — `PdfDocumentViewWidget` + `revealPageRect` / `navigateToHostSearchHit` / `openDocumentAndRevealSearchHit` (scroll + optional highlight + open+jump). Sibling **`pdf_document_model_smoke`** unchanged (buffer failures). No copyrighted corpus per AGENTS.md.",
+          "meta": {
+            "sourceDocs": [
+              "tests/fixtures/README.md",
+              "tests/CMakeLists.txt",
+              "tests/pdf_document_view_reveal_smoke.cpp",
+              "docs/adrs/0004-public-api-surface-freeze.md",
+              "docs/widget-coordinate-contract.md"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "docs-gov",
+      "name": "Documentation & governance alignment",
+      "status": "done",
+      "owner": "PM",
+      "notes": "**Rollup (2026-05-13):** `docs-concept` refreshed against PDFium default, CMake package, ADRs 0001–0004, coordinate contract, CI/CTest/fixture smoke, demo scope, optional tiles/async (ADR-0002). `docs-rtm` **done:** expanded **`docs/requirements-traceability-matrix.md`** (minimum schema, reverse CTest→FR), **`rtm-summary.json`** `partial-governed`. **`docs-doxygen-tutorial`:** Doxygen + tutorial + header file-briefs landed. Further strict phase-gate RTM review = PM/release process per **`ai-toolkit/02-governance/09-traceability-guardrail.md`**.",
+      "children": [
+        {
+          "id": "docs-concept",
+          "name": "Maintain docs/concept-pdf-document-view.md as steering doc",
+          "status": "done",
+          "owner": "PM",
+          "notes": "Aligned §3 (CMake + CI smoke), §4 (render/tiles/async MVP vs Poppler stub), §5 (ADR-0001 + 0003), §9 + document status (steering, ADR-0004 freeze, **AGENTS.md** pointer); WBS **`backend-followon`** holds deferred post–macOS backend backlog; no stale “tiles/async = future only” claim."
+        },
+        {
+          "id": "docs-rtm",
+          "name": "Optional requirements / traceability slice per ai-toolkit when stabilizing",
+          "status": "done",
+          "owner": "PM",
+          "notes": "**MVP governed slice (2026-05-13):** **`docs/requirements-traceability-matrix.md`** — columns per **`ai-toolkit/02-governance/09-traceability-guardrail.md`** §3 minimum (arch, design, implementation, test IDs, validation, version, last updated), **NFR-001** (licensing/notices install story) + **NFR-002** (CI + CTest), reverse table **CTest → FR/NFR**. **`rtm-summary.json`**: `partial-governed`, counts 5 FR / 2 NFR. Full lifecycle gate / extra columns = PM + release checklist, not blocking this node."
+        },
+        {
+          "id": "docs-api-adr",
+          "name": "ADR for frozen public API surface",
+          "status": "done",
+          "owner": "PM",
+          "notes": "Merged into **`docs/adrs/0004-public-api-surface-freeze.md`** (same deliverable as **`widget-api`** gate)."
+        },
+        {
+          "id": "docs-doxygen-tutorial",
+          "name": "Doxygen HTML API reference + integration tutorial",
+          "status": "done",
+          "owner": "PM",
+          "notes": "**Done (2026-05-13):** `docs/doxygen/Doxyfile.in` + root CMake `PDFDOCUMENTVIEW_BUILD_DOCS` (default OFF) + `docs` custom target when Doxygen is found; checked-in `docs/doxygen/Doxyfile` for `cd docs/doxygen && doxygen Doxyfile`; README prerequisites + CMake `-D` + output path; **`docs/tutorial-pdf-document-view.md`** (embed, file/buffer, nav, zoom, find, host highlights, `openDocumentAndRevealSearchHit`, coordinate contract pointer, capabilities/backends, `find_package`). Public headers: `@file` + brief/detail on classes, methods, signals; `src/*.cpp`: concise `@file` blocks for implementation context."
+        }
+      ]
+    }
+  ]
+}

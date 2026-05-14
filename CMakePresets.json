@@ -1,0 +1,43 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "mac-qt6",
+      "displayName": "macOS Qt 6",
+      "description": "Debug build using a Qt 6 macOS kit. Set environment variable QT_PREFIX to the kit prefix containing Qt6Config.cmake (for example $HOME/Qt/6.11.x/macos). For plain `cmake -S` without this preset, pass the same path via -DCMAKE_PREFIX_PATH=... instead.",
+      "binaryDir": "${sourceDir}/build/presets/mac-qt6",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_PREFIX_PATH": "$env{QT_PREFIX}"
+      }
+    },
+    {
+      "name": "cpack-without-shipped-pdfium",
+      "displayName": "CPack TGZ without shipped PDFium",
+      "description": "Release + CPack like CI, with PDFDOCUMENTVIEW_PACKAGE_COMPONENT_SET=RUNTIME_WITHOUT_SHIPPED_PDFIUM (integrator supplies libpdfium). Requires QT_PREFIX or CMAKE_PREFIX_PATH to a Qt 6 kit (same as mac-qt6).",
+      "binaryDir": "${sourceDir}/build/presets/cpack-without-shipped-pdfium",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_PREFIX_PATH": "$env{QT_PREFIX}",
+        "PDFDOCUMENTVIEW_BUILD_EXAMPLES": "ON",
+        "PDFDOCUMENTVIEW_ENABLE_CPACK": "ON",
+        "PDFDOCUMENTVIEW_PACKAGE_COMPONENT_SET": "RUNTIME_WITHOUT_SHIPPED_PDFIUM"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "mac-qt6",
+      "configurePreset": "mac-qt6"
+    },
+    {
+      "name": "cpack-without-shipped-pdfium",
+      "configurePreset": "cpack-without-shipped-pdfium"
+    }
+  ]
+}

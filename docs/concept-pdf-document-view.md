@@ -12,6 +12,8 @@ A **small sample program** (`main.cpp` and a dedicated CMake target) is **in sco
 
 ## 2. Relationship to Qt’s built-in PDF widgets
 
+**Intended role:** **`PdfDocumentViewWidget` plus the PDFium-backed render path** is the **deliberate substitute** for **Qt PDF** (`QtPdf` / `QPdfDocument` / `QPdfView` and related types) in host applications that need **richer PDFium-level behavior** than Qt’s PDF module exposes. That is **not** a commitment to match every Qt PDF convenience API one-for-one; it is a **widget + engine** choice under this repository’s control.
+
 Qt provides **high-level PDF types** (`QPdfDocument`, `QPdfView`, Quick PDF types, etc.) that are sufficient for **simple** embedded preview. This component is aimed at cases where **Qt’s surface area is too narrow** for application needs—for example:
 
 - **Scroll-to-rectangle** and **tight sync** between search hits and painting.
@@ -20,6 +22,8 @@ Qt provides **high-level PDF types** (`QPdfDocument`, `QPdfView`, Quick PDF type
 
 This project is **not** seeking to contribute the implementation **into** the Qt Project at this time. Shipping an **independent** library keeps **release cadence**, **API shape**, and **backend choice** under repository control.
 
+**Basic demo note:** historical: we do not use Qt Pdf in the demo. `PdfDocumentViewWidget` is the only PDF surface under `examples/basic`; the **supported integration story** is the widget and its **PDFium** (or future Poppler) backend.
+
 ---
 
 ## 3. Independent repository and reusable component
@@ -27,8 +31,13 @@ This project is **not** seeking to contribute the implementation **into** the Qt
 **Goals:**
 
 - **One embeddable widget** (and minimal supporting API) consumable from **many** applications without copying source.
-- **Clear CMake package** (or equivalent) so downstream projects can `find_package` / `add_subdirectory` / FetchContent as they prefer.
+- **Clear CMake package** (or equivalent) so downstream projects can `find_package` / `add_subdirectory` / FetchContent as they prefer — **shipped** today (`PDFDocumentViewConfig.cmake`, `PDFDocumentView::pdf_document_view`; see root **README**).
 - **Backend pluggability** at the **rendering and text-geometry** layer, not only at the “which `QWidget` to use” layer.
+- **Reproducible smoke verification:** **macOS** CI (**.github/workflows/ci.yml**) configures Release, builds library + **`examples/basic`**, runs **CTest** (including PDFium fixture smoke where enabled); see **README** / WBS **`demo-ci`** for scope (e.g. synthetic **`tests/fixtures/minimal-one-page.pdf`**).
+
+**Distribution (source-first):** The **primary** ship vehicle for this component is **source**—integrators obtain the repository (or a fork / tarball), run **CMake** with their **Qt 6** prefix and chosen backend (**PDFIUM** / **Poppler**), and link **`PDFDocumentView::pdf_document_view`** into **their** application. **Code signing**, **notarization**, **`macdeployqt`** / **`windeployqt`**, store submission, and **application-level** third-party notices are **host-product** responsibilities unless this project explicitly publishes **signed prebuilt** library binaries (not the default expectation; see **README** → **MVP → full ship**). A **bounded** checklist of repo vs integrator obligations (still **not** counsel) is **`docs/legal-integration-checklist.md`**.
+
+**Embeddable public API (0.1.x):** headers under `include/pdf_document_view/` and the **`PdfDocumentViewWidget`** contract are **stability-governed** per **`docs/adrs/0004-public-api-surface-freeze.md`** (PATCH = compatible fixes; MINOR = optional additive API; MAJOR + ADR update for breaks).
 
 **Non-goals (initially):**
 
@@ -44,21 +53,31 @@ The **GNOME Evince** project is a useful **structural** reference: separation be
 
 Suggested boundaries:
 
-| Layer | Responsibility |
-|-------|------------------|
-| **Document** | Open path or buffer, page count, page size cache, error surfacing. |
-| **Render service** | Page index + scale (+ optional tile rect) → raster or pixmap; threading policy. |
-| **Text / find** | Search and **quads** (or equivalent) in **page coordinates** for overlay and scroll-to. |
-| **Widget** | Input, scroll/zoom, coordinate transforms, **paint** document page + **overlay** highlights. |
-| **Capabilities** | Optional flags per backend (forms, annotations, color intents)—avoid pretending parity. |
+| Layer              | Responsibility                                                                               |
+| ------------------ | -------------------------------------------------------------------------------------------- |
+| **Document**       | Open path or buffer, page count, page size cache, error surfacing. Implemented as **`PdfDocumentModel`** + PDFium concrete type in `src/`; the widget delegates **`setDocumentPath`** / **`openDocumentBuffer`** and exposes **`documentModel()`**, **`documentError()`**, and signals **`documentOpened`** / **`documentError`**. |
+| **Render service** | Page index + scale (+ optional tile rect) → raster or pixmap; threading policy. **PDFium today:** default **full-page, synchronous** paint; optional **GUI-thread tiles** and optional **async tile worker** (off by default) per **`docs/rendering-threading.md`** and **ADR-0002**. |
+| **Text / find**    | Search and **quads** (or equivalent) in **page coordinates** for overlay and scroll-to. **MVP (PDFium):** `TextMatch::pageRect` in top-down page units; widget exposes `findMatches()` / `scrollToFindMatch` for hosts and internal highlights.      |
+| **Widget**         | Input, scroll/zoom, coordinate transforms, **paint** document page + **overlay** highlights. |
+| **Capabilities**   | Optional flags per backend (forms, annotations, color intents)—avoid pretending parity.      |
 
-**Coordinate contract:** internal contracts should prefer **page space** / PDF user units plus an explicit **scale**; the widget maps to **device pixels** for painting and hit-testing.
+**Embeddable widget coordinates:** **`docs/widget-coordinate-contract.md`** spells out **page space** vs **layout and device pixels**, the **viewport** / scroll mapping, how **`PageRenderRequest`** ties to rasterization, host responsibilities (chrome and dialogs), and how **`TextMatch::pageRect`** maps into **`QPainter`** coordinates for custom overlays.
+
+**Render service (threading):** The **default** path remains **full-page, synchronous** rasterization on the **Qt GUI thread** with PDFium work serialized against the shared document model (**`docs/rendering-threading.md`**, **ADR-0002**). **Optional (PDFium and Poppler REAL):** **GUI-thread tile** rendering (`tileRenderingEnabled` + backend **`tileRendering`**) and an **opt-in async tile** path (`asyncTileRenderingEnabled`, default **OFF**) that rasterizes tiles on a **dedicated worker thread** with per-job document isolation — same references. **Poppler stub:** no tiles / no async; capabilities report accordingly. Broader **worker pools**, **shared-document** cross-thread raster, and **continuous-scroll** tile scheduling remain **out of scope** until a future ADR promotes them.
+
+**Document model (file, buffer, errors):** whether integrators call **`PdfDocumentModel`** directly (**`createDefaultPdfDocumentModel()`**, **`openFile`**, **`openBuffer`**, **`close`**, **`pageCount`**, **`lastError`**) or go through **`PdfDocumentViewWidget`** (**`setDocumentPath`**, **`openDocumentBuffer`**, plus **`documentOpened`** / **`documentError`**), the same contract applies: one open document, explicit failure messages, and page geometry only after a successful load.
+
+**Coordinate contract (summary):** prefer **page space** / PDF user units plus an explicit **scale**; the widget maps to **device pixels** for rasterization and back to **layout** coordinates for painting — full detail in **`docs/widget-coordinate-contract.md`**.
 
 ---
 
 ## 5. Rendering backends and licensing
 
-Two candidate engines are under discussion:
+**Default (locked for now):** **PDFium** — proceed on this basis unless it proves inadequate for required capabilities, then revisit.
+
+**Qt PDF note:** In the split-from-parent workstream, **Qt PDF / QTPDF** looked insufficient versus **direct PDFium** for the rendering and geometry-style surface this widget targets.
+
+Two engines remain in architectural scope:
 
 | Backend | Notes |
 |---------|--------|
@@ -70,7 +89,9 @@ Two candidate engines are under discussion:
 - a **single** default backend per release line, or  
 - **split packages** (e.g. core + `pdfdocumentview-pdfium` vs `pdfdocumentview-poppler`) so consumers **opt in** to obligations explicitly.
 
-This document does **not** provide legal advice; record decisions in the project **decision log** and, when needed, project **ADRs**.
+**Engine choice, license, and third-party notices** for PDFium (and hypotheses for linked binaries) are governed by **`docs/adrs/0001-pdf-engine-license-and-third-party-notices.md`**. **Accepted policy detail** for default PDFium, Poppler opt-in, and split-package / install-shape options lives in **`docs/adrs/0003-split-packages-and-poppler-opt-in.md`**.
+
+This document does **not** provide legal advice; record decisions in the project **decision log** and, when needed, project **ADRs** (0001–0004 as applicable).
 
 ---
 
@@ -98,10 +119,10 @@ Treat **sample PDFs** and **rendered output** as **local** or **fixture** materi
 
 ## 9. Next artifacts (when stabilizing)
 
-When the concept stabilizes, align with `ai-toolkit` governance: requirements/architecture artifacts, ADRs for **backend selection** and **public API**, and a **traceability** slice appropriate to an open-source widget (even if lighter than a safety-critical system).
+When the concept stabilizes, align with `ai-toolkit` governance: requirements/architecture artifacts, ADRs for **backend selection** and **public API**, and a **traceability** slice appropriate to an open-source widget (even if lighter than a safety-critical system). A **minimal RTM shell** (requirement IDs, statements, sources, verification placeholders) is started in **`docs/requirements-traceability-matrix.md`**; expand and gate per **`ai-toolkit/02-governance/09-traceability-guardrail.md`**.
 
 ---
 
 ## Document status
 
-**Pre-concept / working notes** — suitable for steering implementation and repo bootstrap; refine or supersede with formal SRS/ADR when the project exits exploration.
+**Steering document** — aligned with the **Phase-1 MVP** in this repository (PDFium default on macOS CI, frozen public API per **ADR-0004**, coordinate contract and ADRs 0001–0003 as referenced above). **`AGENTS.md`** is the authoritative **agent/project contract** (embeddable library vs demo, no upstream-Qt goal, corpus policy); this concept and **ADR-0004** stay aligned on the **0.1.x** frozen headers + **`PdfDocumentViewWidget`** surface only. **Primary distribution:** **source** to integrators; signing/notarization and product-level notices for **host applications** are integrator scope unless the project explicitly ships signed prebuilt binaries (**README**, **MVP → full ship**). Suitable for integrators and maintainers; refine or supersede with a formal SRS if the project needs a heavier requirements baseline.

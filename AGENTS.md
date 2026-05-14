@@ -47,6 +47,7 @@ The project is NOT:
 - a commitment to match **every** feature of either backend—expose **capabilities** honestly
 - a full **document viewer application** product (the demo is **not** the product)
 - a channel for committing **copyrighted PDFs** or **full extracted text** without explicit approval
+- a commitment to ship **signed, store-ready application binaries** from this repository by default—**source-first** distribution is the baseline scope (see **README**, **MVP → full ship**); integrators own signing and notices for **their** shipped apps
 
 **Licensing note:** the **choice of PDF engine** may constrain how this library is **released** (e.g. permissive vs copyleft). Record decisions in `docs/` artifacts per governance when stabilizing.
 
@@ -56,6 +57,8 @@ The project is NOT:
 
 - **`examples/`** (or the documented demo target) exists to show **how to wire** the widget: construct, open a document, call documented APIs, quit.
 - Do **not** expand the demo into a general-purpose PDF viewer unless requirements explicitly say so.
+- **`PdfDocumentViewWidget` + PDFium** is the **intended substitute** for **Qt PDF** in hosts that need **deeper engine capability** than Qt’s PDF module exposes; the **library** does **not** take a dependency on Qt Pdf.
+- Historical: we do not use Qt Pdf in the demo. `PdfDocumentViewWidget` is the only PDF surface; menus (and any toolbar) drive the public widget API.
 - Host applications own menus, persistence, file dialogs, activation quirks, and deployment.
 
 ---
@@ -110,6 +113,10 @@ For non-trivial work:
 1. Read `docs/concept-pdf-document-view.md` for current intent.
 2. Read `ai-toolkit/02-governance/00-lifecycle-bootstrap.md` and `ai-toolkit/02-governance/guardrails-index.md` if formal artifacts or phase boundaries apply.
 3. State assumptions about **backend**, **Qt version**, and **public API** before large changes.
+
+### WBS hygiene (mandatory)
+
+- When an agent completes work that corresponds to a task in `tools/wbs-dashboard/public/wbs-data.json` (or discovers a new tracking need), **update that JSON in the same change series**: set `status`, refresh `notes`, and extend `meta.sourceDocs` when new docs or ADRs apply. Before finishing, run `python3 -m json.tool tools/wbs-dashboard/public/wbs-data.json` so the file is valid JSON (fix any parse errors the command reports).
 
 ---
 
