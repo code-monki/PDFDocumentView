@@ -53,4 +53,4 @@ Desktop.ini
 *.pdf
 # Allow explicitly curated tiny fixtures only:
 !tests/fixtures/minimal-one-page.pdf
-!tests/fixtures/demo-synthetic-3page.pdf
+!/examples/basic/demo-synthetic-3page.pdf

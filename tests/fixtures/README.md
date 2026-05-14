@@ -2,7 +2,7 @@
 
 **`minimal-one-page.pdf`** — synthetic, repo-authored for tests (minimal PDF 1.1, one blank page).
 
-**`demo-synthetic-3page.pdf`** — synthetic three-page PDF (short on-page labels) used as the **basic demo** default document; regenerate with **`tools/generate_demo_synthetic_3page_pdf.sh`** (requires **`gs`**).
+The **basic demo** default PDF is **`examples/basic/demo-synthetic-3page.pdf`** (not in this directory); regenerate with **`tools/generate_demo_synthetic_3page_pdf.sh`** (requires **`gs`**) if you change placeholder content.
 
 This directory is reserved for **small, approved** PDF binaries used in automated tests or documentation examples.
 

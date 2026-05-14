@@ -22,8 +22,6 @@
 namespace {
 
 QString resolveDemoPdfPath(int argc, char* argv[]) {
-    // argv[1]; then demo-synthetic-3page.pdf next to the executable (CMake POST_BUILD / install);
-    // else configure-time absolute path to tests/fixtures/...; else same filename in CWD.
     if (argc > 1) {
         const QFileInfo fi(QString::fromLocal8Bit(argv[1]));
         if (fi.exists()) {
@@ -31,25 +29,12 @@ QString resolveDemoPdfPath(int argc, char* argv[]) {
         }
         qWarning() << "PDF path does not exist (trying defaults):" << argv[1];
     }
+    // Shipped synthetic fixture: copied next to the demo binary by examples/basic/CMakeLists.txt.
     const QString bundled =
         QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("demo-synthetic-3page.pdf"));
-    {
-        const QFileInfo fi(bundled);
-        if (fi.exists()) {
-            return fi.absoluteFilePath();
-        }
-    }
-#ifdef PDFDOCUMENTVIEW_EXAMPLE_DEFAULT_PDF
-    {
-        const QFileInfo fi(QStringLiteral(PDFDOCUMENTVIEW_EXAMPLE_DEFAULT_PDF));
-        if (fi.exists()) {
-            return fi.absoluteFilePath();
-        }
-    }
-#endif
-    const QFileInfo cwdFi(QStringLiteral("demo-synthetic-3page.pdf"));
-    if (cwdFi.exists()) {
-        return cwdFi.absoluteFilePath();
+    const QFileInfo fi(bundled);
+    if (fi.exists()) {
+        return fi.absoluteFilePath();
     }
     return {};
 }

@@ -281,7 +281,7 @@
       "name": "Minimal demo, CI, and fixtures",
       "status": "done",
       "owner": "Build",
-      "notes": "**Done (2026-05-13):** Basic demo harness in **`examples/basic/main.cpp`** (construct widget, open/close via `setDocumentPath`, navigation, zoom/fit, PDFium tile + async toggles, find, demo highlights, status wiring). **Update (2026-05-14):** Default PDF is committed **`tests/fixtures/demo-synthetic-3page.pdf`** (regenerate: **`tools/generate_demo_synthetic_3page_pdf.sh`**), copied next to the demo binary at **`POST_BUILD`**, with fallbacks **`PDFDOCUMENTVIEW_EXAMPLE_DEFAULT_PDF`** and CWD (see **`examples/basic/CMakeLists.txt`**). CI via **`.github/workflows/ci.yml`** (multi-arch matrix per **`ci-smoke`**, Qt **6.11.2**, Release, examples on, `ctest --output-on-failure`). Licensed-style synthetic fixture **`tests/fixtures/minimal-one-page.pdf`** plus smoke tests: **`pdf_document_fixture_smoke`**, **`pdf_document_model_smoke`**, **`pdf_document_view_reveal_smoke`** (`revealPageRect` / `navigateToHostSearchHit` / `openDocumentAndRevealSearchHit`), **`pdf_widget_async_tile_capability_smoke`**.",
+      "notes": "**Done (2026-05-13):** Basic demo harness in **`examples/basic/main.cpp`** (construct widget, open/close via `setDocumentPath`, navigation, zoom/fit, PDFium tile + async toggles, find, demo highlights, status wiring). **Update (2026-05-14):** Default PDF is committed **`examples/basic/demo-synthetic-3page.pdf`** (regenerate: **`tools/generate_demo_synthetic_3page_pdf.sh`**), copied next to the demo binary at **`POST_BUILD`** and resolved via **`QCoreApplication::applicationDirPath()`** after **`argv[1]`** (see **`examples/basic/CMakeLists.txt`**). CI via **`.github/workflows/ci.yml`** (multi-arch matrix per **`ci-smoke`**, Qt **6.11.2**, Release, examples on, `ctest --output-on-failure`). Licensed-style synthetic fixture **`tests/fixtures/minimal-one-page.pdf`** plus smoke tests: **`pdf_document_fixture_smoke`**, **`pdf_document_model_smoke`**, **`pdf_document_view_reveal_smoke`** (`revealPageRect` / `navigateToHostSearchHit` / `openDocumentAndRevealSearchHit`), **`pdf_widget_async_tile_capability_smoke`**.",
       "children": [
         {
           "id": "demo-basic",
@@ -302,12 +302,14 @@
           "name": "Automated tests with synthetic or clearly licensed tiny PDFs",
           "status": "done",
           "owner": "Build",
-          "notes": "**Done:** Synthetic fixture `tests/fixtures/minimal-one-page.pdf` (~345 B, PDF 1.1, one blank page). Additional **`tests/fixtures/demo-synthetic-3page.pdf`** (~3 KiB, three pages) for the **basic demo** default document (**`tools/generate_demo_synthetic_3page_pdf.sh`**). CTest **`pdf_document_fixture_smoke`** (PDFium-only target) opens `minimal-one-page.pdf` via `createDefaultPdfDocumentModel()->openFile` with `FIXTURE_PDF_PATH` from CMake; optional `argv[1]` override. **`pdf_document_view_reveal_smoke`** — `PdfDocumentViewWidget` + `revealPageRect` / `navigateToHostSearchHit` / `openDocumentAndRevealSearchHit` (scroll + optional highlight + open+jump). Sibling **`pdf_document_model_smoke`** unchanged (buffer failures). No copyrighted corpus per AGENTS.md.",
+          "notes": "**Done:** Synthetic fixture `tests/fixtures/minimal-one-page.pdf` (~345 B, PDF 1.1, one blank page). The **basic demo** ships **`examples/basic/demo-synthetic-3page.pdf`** separately (see **`tools/generate_demo_synthetic_3page_pdf.sh`**). CTest **`pdf_document_fixture_smoke`** (PDFium-only target) opens `minimal-one-page.pdf` via `createDefaultPdfDocumentModel()->openFile` with `FIXTURE_PDF_PATH` from CMake; optional `argv[1]` override. **`pdf_document_view_reveal_smoke`** — `PdfDocumentViewWidget` + `revealPageRect` / `navigateToHostSearchHit` / `openDocumentAndRevealSearchHit` (scroll + optional highlight + open+jump). Sibling **`pdf_document_model_smoke`** unchanged (buffer failures). No copyrighted corpus per AGENTS.md.",
           "meta": {
             "sourceDocs": [
               "tests/fixtures/README.md",
               "tests/CMakeLists.txt",
               "tests/pdf_document_view_reveal_smoke.cpp",
+              "examples/basic/CMakeLists.txt",
+              "examples/basic/main.cpp",
               "tools/generate_demo_synthetic_3page_pdf.sh",
               "docs/adrs/0004-public-api-surface-freeze.md",
               "docs/widget-coordinate-contract.md"

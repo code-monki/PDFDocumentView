@@ -1,10 +1,10 @@
 #!/usr/bin/env sh
-# Regenerate tests/fixtures/demo-synthetic-3page.pdf (synthetic text for basic demo / manual checks).
+# Regenerate examples/basic/demo-synthetic-3page.pdf (synthetic placeholder text only).
 # Requires Ghostscript (gs) on PATH. Committed output keeps CI free of this dependency.
 
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT="${ROOT}/tests/fixtures/demo-synthetic-3page.pdf"
+OUT="${ROOT}/examples/basic/demo-synthetic-3page.pdf"
 TMP="${OUT}.tmp.$$"
 
 cleanup() { rm -f "${TMP}"; }
@@ -16,10 +16,11 @@ command -v gs >/dev/null 2>&1 || {
 }
 
 gs -q -o "${TMP}" -sDEVICE=pdfwrite -dNOPAUSE -dBATCH \
-    -c "/Times-Roman findfont 24 scalefont setfont \
-        100 700 moveto (PDFDocumentView demo page 1) show showpage \
-        100 700 moveto (PDFDocumentView demo page 2) show showpage \
-        100 700 moveto (PDFDocumentView demo page 3) show showpage"
+    -dDEVICEWIDTHPOINTS=612 -dDEVICEHEIGHTPOINTS=792 \
+    -c "/Helvetica findfont 14 scalefont setfont \
+        72 720 moveto (Synthetic PDFDocumentView demo placeholder text page 1) show showpage \
+        72 720 moveto (Synthetic PDFDocumentView demo placeholder text page 2) show showpage \
+        72 720 moveto (Synthetic PDFDocumentView demo placeholder text page 3) show showpage"
 
 mv "${TMP}" "${OUT}"
 echo "wrote ${OUT}"

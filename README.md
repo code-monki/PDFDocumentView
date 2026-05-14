@@ -258,7 +258,7 @@ The demo shows **`PdfDocumentViewWidget`** (library render path for **PDFIUM**).
 - **Zoom:** **Ctrl+mouse wheel** and **View** menu actions; match counts and hits are not written to logs.
 - **Find:** **Search → Find…**; **Find next** / **Find previous** cycle matches; **Clear highlights** calls `clearFind()`.
 
-Path resolution: explicit **`argv[1]`** when that file exists; otherwise **`demo-synthetic-3page.pdf`** next to the demo executable (**`QCoreApplication::applicationDirPath()`**), copied from **`tests/fixtures/demo-synthetic-3page.pdf`** at **`POST_BUILD`** (and installed beside the **`.app`** **`MacOS`** binary or next to the **`bin`** executable when **`PDFDOCUMENTVIEW_INSTALL`** is on); otherwise **`PDFDOCUMENTVIEW_EXAMPLE_DEFAULT_PDF`** (absolute path to that same fixture recorded at **configure** time); otherwise **`demo-synthetic-3page.pdf`** in the **current working directory**; otherwise no document loads until **File → Open**. You may always pass a path:
+Path resolution: explicit **`argv[1]`** when that file exists; otherwise **`demo-synthetic-3page.pdf`** next to the demo executable (**`QCoreApplication::applicationDirPath()`**), staged from **`examples/basic/demo-synthetic-3page.pdf`** at **`POST_BUILD`** (and installed beside the **`.app`** **`MacOS`** binary or next to the **`bin`** executable when **`PDFDOCUMENTVIEW_INSTALL`** is on). Otherwise no document loads until **File → Open**. You may always pass a path:
 
 ```sh
 ./build/examples/basic/pdf_document_view_basic.app/Contents/MacOS/pdf_document_view_basic /path/to/file.pdf
@@ -266,7 +266,7 @@ Path resolution: explicit **`argv[1]`** when that file exists; otherwise **`demo
 
 Historical: we do not use Qt Pdf in the demo. **`PdfDocumentViewWidget`** is the only PDF surface, so the demo exercises the library's public API rather than a parallel raster path.
 
-The committed **`tests/fixtures/demo-synthetic-3page.pdf`** is a tiny synthetic three-page placeholder for the basic demo, local runs, and CI; regenerate with **`tools/generate_demo_synthetic_3page_pdf.sh`** when **`gs`** is available. Integrators may substitute their own small PDFs. Other curated test fixtures live under **`tests/fixtures/`** (see **`tests/fixtures/README.md`**).
+The committed **`examples/basic/demo-synthetic-3page.pdf`** is a tiny synthetic three-page placeholder for the basic demo, local runs, and CI; regenerate with **`tools/generate_demo_synthetic_3page_pdf.sh`** when **`gs`** is available. Integrators may substitute their own small PDFs. Other curated test fixtures live under **`tests/fixtures/`** (see **`tests/fixtures/README.md`**).
 
 On macOS the demo is built as **`build/examples/basic/pdf_document_view_basic.app`** (multi-config generators may nest **`Debug/`** — **`make demo-run`** searches common paths).
 
