@@ -133,7 +133,10 @@ function(_pdfdocumentview_download_extract_pdfium asset_file sha256_hex)
 endfunction()
 
 function(_pdfdocumentview_pdfium_host_cpu out_var)
-    if(PDFDOCUMENTVIEW_CMAKE_ARCH)
+    # NOTE: `if(PDFDOCUMENTVIEW_CMAKE_ARCH)` is NOT a string-emptiness check. When the cache value is
+    # something like `x86_64`, CMake re-parses that token as a *variable name* (`if(x86_64)`), so the
+    # override silently fails and the wrong PDFium tarball can be selected. Always compare as a string.
+    if(NOT "${PDFDOCUMENTVIEW_CMAKE_ARCH}" STREQUAL "")
         set("${out_var}" "${PDFDOCUMENTVIEW_CMAKE_ARCH}" PARENT_SCOPE)
         return()
     endif()

@@ -82,6 +82,24 @@ if(PDFDOCUMENTVIEW_RENDER_BACKEND STREQUAL "POPPLER")
     if(PDFDOCUMENTVIEW_POPPLER_REAL)
         find_package(PkgConfig REQUIRED)
         pkg_check_modules(PdfDocPopplerQt6 REQUIRED IMPORTED_TARGET poppler-qt6)
+        # pkgconf sometimes omits "system" -I flags from INTERFACE_INCLUDE_DIRECTORIES. Locate the
+        # public headers explicitly so `#include <poppler/qt6/...>` works on Debian/Ubuntu multiarch.
+        find_path(PDFDOCUMENTVIEW_POPPLER_QT6_INCLUDE_DIR
+            NAMES poppler/qt6/poppler-document.h
+            HINTS ${PdfDocPopplerQt6_INCLUDE_DIRS}
+            PATHS
+                /usr/include
+                /usr/local/include
+                /usr/include/x86_64-linux-gnu
+                /usr/include/aarch64-linux-gnu)
+        if(PDFDOCUMENTVIEW_POPPLER_QT6_INCLUDE_DIR)
+            message(STATUS
+                "PDFDocumentView: Poppler-Qt6 headers at ${PDFDOCUMENTVIEW_POPPLER_QT6_INCLUDE_DIR}")
+        else()
+            message(WARNING
+                "PDFDocumentView: could not locate poppler/qt6/poppler-document.h; "
+                "relying on PkgConfig::PdfDocPopplerQt6 include interface only.")
+        endif()
         set(PDFDOCUMENTVIEW_HAVE_POPPLER_QT6 TRUE)
         message(STATUS "PDFDocumentView: Poppler-Qt6 enabled (PDFDOCUMENTVIEW_POPPLER_REAL=ON)")
     else()
