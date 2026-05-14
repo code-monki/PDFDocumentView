@@ -4,15 +4,27 @@ add_executable(pdf_document_view_basic
 
 target_link_libraries(pdf_document_view_basic PRIVATE PDFDocumentView::pdf_document_view Qt6::Widgets)
 
-# Absolute default PDF at repo root when present at configure time (file is typically .gitignored).
-set(_pdfdocumentview_example_default_pdf "${CMAKE_SOURCE_DIR}/gnu-c-language-manual.pdf")
-if(EXISTS "${_pdfdocumentview_example_default_pdf}")
-    file(REAL_PATH "${_pdfdocumentview_example_default_pdf}" _pdfdocumentview_example_default_pdf_abs)
-    file(TO_CMAKE_PATH "${_pdfdocumentview_example_default_pdf_abs}" _pdfdocumentview_example_default_pdf_cmake)
-    # C++11 raw string avoids fragile -D escaping for paths with spaces or backslashes (delimiter must not appear in path).
-    target_compile_definitions(pdf_document_view_basic PRIVATE
-        "PDFDOCUMENTVIEW_EXAMPLE_DEFAULT_PDF=R\"(${_pdfdocumentview_example_default_pdf_cmake})\"")
+# Fixture path must not use CMAKE_SOURCE_DIR (parent project when this tree is add_subdirectory'd).
+get_filename_component(_pdfdocumentview_basic_demo_pdf
+    "${CMAKE_CURRENT_LIST_DIR}/../../tests/fixtures/demo-synthetic-3page.pdf" ABSOLUTE)
+if(NOT EXISTS "${_pdfdocumentview_basic_demo_pdf}")
+    message(FATAL_ERROR
+        "Missing synthetic demo PDF: ${_pdfdocumentview_basic_demo_pdf} "
+        "(regenerate with tools/generate_demo_synthetic_3page_pdf.sh when Ghostscript is available)")
 endif()
+file(REAL_PATH "${_pdfdocumentview_basic_demo_pdf}" _pdfdocumentview_basic_demo_pdf_abs)
+file(TO_CMAKE_PATH "${_pdfdocumentview_basic_demo_pdf_abs}" _pdfdocumentview_basic_demo_pdf_cmake)
+target_compile_definitions(pdf_document_view_basic PRIVATE
+    "PDFDOCUMENTVIEW_EXAMPLE_DEFAULT_PDF=R\"(${_pdfdocumentview_basic_demo_pdf_cmake})\"")
+
+add_custom_command(
+    TARGET pdf_document_view_basic
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${_pdfdocumentview_basic_demo_pdf}"
+        "$<TARGET_FILE_DIR:pdf_document_view_basic>/demo-synthetic-3page.pdf"
+    VERBATIM
+    COMMENT "Stage synthetic demo PDF next to pdf_document_view_basic")
 
 # Historical: this demo intentionally does not use Qt Pdf. PdfDocumentViewWidget is the only PDF
 # surface so the demo exercises the library's public API, not a parallel raster path.
@@ -78,4 +90,13 @@ if(PDFDOCUMENTVIEW_INSTALL)
         BUNDLE DESTINATION "${CMAKE_INSTALL_BINDIR}"
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
         COMPONENT PDFDocumentView_Development)
+    if(APPLE)
+        install(FILES "${_pdfdocumentview_basic_demo_pdf}"
+            DESTINATION "$<TARGET_BUNDLE_CONTENT_DIR:pdf_document_view_basic>/MacOS"
+            COMPONENT PDFDocumentView_Development)
+    else()
+        install(FILES "${_pdfdocumentview_basic_demo_pdf}"
+            DESTINATION "${CMAKE_INSTALL_BINDIR}"
+            COMPONENT PDFDocumentView_Development)
+    endif()
 endif()

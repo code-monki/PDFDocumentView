@@ -4,7 +4,9 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QCoreApplication>
 #include <QDebug>
+#include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QInputDialog>
@@ -20,12 +22,22 @@
 namespace {
 
 QString resolveDemoPdfPath(int argc, char* argv[]) {
+    // argv[1]; then demo-synthetic-3page.pdf next to the executable (CMake POST_BUILD / install);
+    // else configure-time absolute path to tests/fixtures/...; else same filename in CWD.
     if (argc > 1) {
         const QFileInfo fi(QString::fromLocal8Bit(argv[1]));
         if (fi.exists()) {
             return fi.absoluteFilePath();
         }
         qWarning() << "PDF path does not exist (trying defaults):" << argv[1];
+    }
+    const QString bundled =
+        QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("demo-synthetic-3page.pdf"));
+    {
+        const QFileInfo fi(bundled);
+        if (fi.exists()) {
+            return fi.absoluteFilePath();
+        }
     }
 #ifdef PDFDOCUMENTVIEW_EXAMPLE_DEFAULT_PDF
     {
@@ -35,9 +47,9 @@ QString resolveDemoPdfPath(int argc, char* argv[]) {
         }
     }
 #endif
-    const QFileInfo def(QStringLiteral("gnu-c-language-manual.pdf"));
-    if (def.exists()) {
-        return def.absoluteFilePath();
+    const QFileInfo cwdFi(QStringLiteral("demo-synthetic-3page.pdf"));
+    if (cwdFi.exists()) {
+        return cwdFi.absoluteFilePath();
     }
     return {};
 }
