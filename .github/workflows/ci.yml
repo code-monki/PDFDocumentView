@@ -27,43 +27,51 @@ jobs:
             variant: pdfium
             qt_host: ""
             qt_arch: ""
+            qt_archives: qtbase
           - os: macos-15-intel
             cpu: x64
             variant: pdfium
             qt_host: ""
             qt_arch: ""
+            qt_archives: qtbase
           # Linux — amd64 + arm64 (partner image); Poppler real backend on both
           - os: ubuntu-24.04
             cpu: x64
             variant: pdfium
             qt_host: linux
             qt_arch: linux_gcc_64
+            qt_archives: qtbase icu
           - os: ubuntu-24.04-arm
             cpu: arm64
             variant: pdfium
             qt_host: linux_arm64
             qt_arch: linux_gcc_arm64
+            qt_archives: qtbase icu
           - os: ubuntu-24.04
             cpu: x64
             variant: poppler-real
             qt_host: linux
             qt_arch: linux_gcc_64
+            qt_archives: qtbase icu
           - os: ubuntu-24.04-arm
             cpu: arm64
             variant: poppler-real
             qt_host: linux_arm64
             qt_arch: linux_gcc_arm64
+            qt_archives: qtbase icu
           # Windows — x64 + arm64 (partner image); PDFIUM only (no apt Poppler on GHA Windows)
           - os: windows-latest
             cpu: x64
             variant: pdfium
             qt_host: windows
             qt_arch: win64_msvc2022_64
+            qt_archives: qtbase
           - os: windows-11-arm
             cpu: arm64
             variant: pdfium
             qt_host: windows_arm64
             qt_arch: win64_msvc2022_arm64
+            qt_archives: qtbase
 
     runs-on: ${{ matrix.os }}
 
@@ -93,7 +101,7 @@ jobs:
         with:
           version: '6.8.3'
           cache: true
-          archives: qtbase
+          archives: ${{ matrix.qt_archives }}
           target: desktop
           host: ${{ matrix.qt_host }}
           arch: ${{ matrix.qt_arch }}
@@ -104,13 +112,20 @@ jobs:
         with:
           version: '6.8.3'
           cache: true
-          archives: qtbase
+          archives: ${{ matrix.qt_archives }}
 
       - name: Configure
         env:
           PKG_CONFIG_ALLOW_SYSTEM_CFLAGS: "1"
           POPPLER_CMAKE_FLAGS: -DPDFDOCUMENTVIEW_RENDER_BACKEND=POPPLER -DPDFDOCUMENTVIEW_POPPLER_REAL=ON
         run: |
+          set -euo pipefail
+          ARCH_FLAGS=""
+          if [ "${{ matrix.cpu }}" = "arm64" ]; then
+            ARCH_FLAGS="-DPDFDOCUMENTVIEW_CMAKE_ARCH=aarch64"
+          else
+            ARCH_FLAGS="-DPDFDOCUMENTVIEW_CMAKE_ARCH=x86_64"
+          fi
           EXTRA_FLAGS=""
           if [ "${{ matrix.variant }}" = "poppler-real" ]; then
             EXTRA_FLAGS="${POPPLER_CMAKE_FLAGS}"
@@ -121,6 +136,7 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_PREFIX_PATH="${QT_ROOT_DIR}" \
+            ${ARCH_FLAGS} \
             ${EXTRA_FLAGS}
 
       - name: Build
@@ -175,7 +191,7 @@ jobs:
         with:
           version: "6.8.3"
           cache: true
-          archives: qtbase
+          archives: qtbase icu
           target: desktop
           host: linux
           arch: linux_gcc_64
