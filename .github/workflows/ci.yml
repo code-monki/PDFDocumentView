@@ -87,22 +87,22 @@ jobs:
           restore-keys: |
             ${{ github.workflow }}-${{ matrix.os }}-${{ matrix.cpu }}-${{ matrix.variant }}-
 
-      - name: Install Qt 6.11.2 (host/arch from matrix)
+      - name: Install Qt 6.11.1 (host/arch from matrix)
         if: matrix.qt_host != ''
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.11.2'
+          version: '6.11.1'
           cache: true
           archives: qtbase
           target: desktop
           host: ${{ matrix.qt_host }}
           arch: ${{ matrix.qt_arch }}
 
-      - name: Install Qt 6.11.2 (macOS — action defaults)
+      - name: Install Qt 6.11.1 (macOS — action defaults)
         if: matrix.qt_host == ''
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.11.2'
+          version: '6.11.1'
           cache: true
           archives: qtbase
 
@@ -169,10 +169,10 @@ jobs:
           test -f "${ROOT}/include/fpdfview.h"
           test -d "${ROOT}/licenses"
 
-      - name: Install Qt 6.11.2
+      - name: Install Qt 6.11.1
         uses: jurplel/install-qt-action@v4
         with:
-          version: "6.11.2"
+          version: "6.11.1"
           cache: true
           archives: qtbase
           target: desktop
