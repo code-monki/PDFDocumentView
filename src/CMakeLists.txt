@@ -54,12 +54,13 @@ if(PDFDOCUMENTVIEW_RENDER_BACKEND STREQUAL "PDFIUM")
             BUILD_RPATH "$ORIGIN"
             INSTALL_RPATH "$ORIGIN")
     endif()
+    get_filename_component(_pdfdocumentview_pdfium_copy_name "${PDFIUM_LIBRARY}" NAME)
     add_custom_command(
         TARGET pdf_document_view
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${PDFIUM_LIBRARY}"
-            "$<TARGET_FILE_DIR:pdf_document_view>/"
+            "$<TARGET_FILE_DIR:pdf_document_view>/${_pdfdocumentview_pdfium_copy_name}"
         VERBATIM
         COMMENT "Stage libpdfium next to pdf_document_view for runtime resolution")
     if(APPLE)

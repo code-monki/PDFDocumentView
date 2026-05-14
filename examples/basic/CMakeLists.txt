@@ -18,7 +18,7 @@ add_custom_command(
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${_pdfdocumentview_basic_demo_pdf}"
-        "$<TARGET_FILE_DIR:pdf_document_view_basic>/"
+        "$<TARGET_FILE_DIR:pdf_document_view_basic>/demo-synthetic-3page.pdf"
     VERBATIM
     COMMENT "Stage synthetic demo PDF next to pdf_document_view_basic")
 
