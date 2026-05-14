@@ -56,7 +56,7 @@ Hosts that **subclass or compose around** the widget should not assume the page 
 **`PageRenderRequest`** is the **backend-facing** description of **one rasterization** of a page at a given **device-pixel** resolution. It does **not** carry a PDF matrix from the host; the widget and backend agree on scale through **`devicePixelSize`** and **`devicePixelRatio`** relative to **`pageSize()`** and the widget’s **zoom**.
 
 - **Full-page paint:** The widget builds an offscreen image of size **`devicePixelSize`**, calls **`PdfRenderBackend::renderPage`**, then draws that image into the **layout** page rect (so one PDF page maps to the full scrollable area for that page index).
-- **Tiles:** **`renderPageTile`** receives an additional **device-space tile rectangle**; each tile still uses the same **`PageRenderRequest`** basis for matrix consistency (see **`docs/rendering-threading.md`**).
+- **Tiles:** **`renderPageTile`** receives an additional **device-space tile rectangle**; each tile still uses the same **`PageRenderRequest`** basis (page index and full-page device pixel size) so page space maps consistently to the shared device grid (see **`docs/rendering-threading.md`**).
 
 Integrators **outside** the backend typically do **not** construct **`PageRenderRequest`**; they rely on **`zoom()`** / **`fitWidth()`** and **`capabilities()`** to understand what the active backend can do.
 

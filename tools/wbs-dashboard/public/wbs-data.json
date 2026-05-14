@@ -6,7 +6,7 @@
       "AGENTS.md (widget library scope, governance under ai-toolkit/)",
       "docs/adrs/0004-public-api-surface-freeze.md (0.1.x public API freeze)",
       "docs/adrs/ (backend choice ADR-0001/0003; public API ADR-0004)",
-      "docs/rendering-threading.md (v1 GUI-thread full-page sync; mutex; future tiles/async)",
+      "docs/rendering-threading.md (v1 GUI-thread full-page sync; PDFium sync tiles: FPDF_RenderPageBitmap + negative offsets; isolated async tiles: FPDF_RenderPageBitmapWithMatrix in pdfium_tile_raster.cpp; mutex; optional async worker)",
       "docs/adrs/0002-render-threading-and-tiles-policy.md",
       "docs/adrs/0003-split-packages-and-poppler-opt-in.md (default PDFium; Poppler opt-in; split package / COMPONENT intent)",
       "cmake/PDFDocumentViewCPack.cmake (optional TGZ; Runtime→PdfiumRuntime dependency; PDFDOCUMENTVIEW_PACKAGE_COMPONENT_SET)",
@@ -220,7 +220,7 @@
               "name": "Tile-based rendering (cache, partial invalidation, progressive paint)",
               "status": "done",
               "owner": "Arch",
-              "notes": "**MVP shipped (PDFium + Poppler Qt6 REAL):** 512px device tiles, LRU 64 (`src/pdf_tile_cache.hpp`), `PdfiumBackend::renderPageTile` + matrix clip; **`PopplerQtBackend::renderPageTile`** (Poppler **`Page::renderToImage`** region); widget `tileRenderingEnabled` + `capabilities().tileRendering` gate, `QTimer::singleShot` one-tile-per-turn drain on GUI thread (`docs/rendering-threading.md`). **Async** uses the same `PdfTileRenderWorker` when enabled (PDFium + Poppler REAL). Demo: View → tile toggle when `capabilities().tileRendering`."
+              "notes": "**MVP shipped (PDFium + Poppler Qt6 REAL):** 512px device tiles, LRU 64 (`src/pdf_tile_cache.hpp`); PDFium **sync** live-model tiles use **`FPDF_RenderPageBitmap`** with negative start offsets vs full **iw×ih** (`PdfiumBackend::renderPageTile` in `src/pdfium_backend.cpp`); **async** isolated tiles use **`pdfiumRenderPageTileIsolated`** with **`FPDF_RenderPageBitmapWithMatrix`** (`src/pdfium_tile_raster.cpp`); **`PopplerQtBackend::renderPageTile`** (Poppler **`Page::renderToImage`** region); widget `tileRenderingEnabled` + `capabilities().tileRendering` gate, `QTimer::singleShot` one-tile-per-turn drain on GUI thread (`docs/rendering-threading.md`). **Async** uses the same `PdfTileRenderWorker` when enabled (PDFium + Poppler REAL). Demo: View → tile toggle when `capabilities().tileRendering`."
             },
             {
               "id": "layer-render-async",
