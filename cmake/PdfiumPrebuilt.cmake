@@ -30,8 +30,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         ON)
 elseif(WIN32)
     option(PDFDOCUMENTVIEW_FETCH_PDFIUM
-        "Download and extract bblanchon/pdfium-binaries for this host (default ON on Windows). "
-        "Set OFF and supply PDFIUM_ROOT or PDFIUM_INCLUDE_DIR and PDFIUM_LIBRARY for air-gapped builds."
+        "Download/extract bblanchon PDFium prebuilt on Windows (default ON). Set OFF and use PDFIUM_ROOT for offline builds."
         ON)
 else()
     option(PDFDOCUMENTVIEW_FETCH_PDFIUM
