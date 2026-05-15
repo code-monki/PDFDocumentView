@@ -58,9 +58,9 @@ constexpr int kMaxFindMatches = 2000;
         return false;
     }
 
-    const QRectF pr = page->pageRectF(Poppler::Page::CropBox);
-    const double pw = qMax(1.0e-6, static_cast<double>(pr.width()));
-    const double ph = qMax(1.0e-6, static_cast<double>(pr.height()));
+    const QSizeF pagePts = page->pageSizeF();
+    const double pw = qMax(1.0e-6, static_cast<double>(pagePts.width()));
+    const double ph = qMax(1.0e-6, static_cast<double>(pagePts.height()));
 
     const int bw = qMax(1, request.devicePixelSize.width());
     const int bh = qMax(1, request.devicePixelSize.height());
@@ -166,9 +166,9 @@ void PopplerQtBackend::renderPage(const PageRenderRequest& request, QPainter& pa
         return;
     }
 
-    const QRectF pr = page->pageRectF(Poppler::Page::CropBox);
-    const double pw = qMax(1.0e-6, static_cast<double>(pr.width()));
-    const double ph = qMax(1.0e-6, static_cast<double>(pr.height()));
+    const QSizeF pagePts = page->pageSizeF();
+    const double pw = qMax(1.0e-6, static_cast<double>(pagePts.width()));
+    const double ph = qMax(1.0e-6, static_cast<double>(pagePts.height()));
 
     const int bw = qMax(1, request.devicePixelSize.width());
     const int bh = qMax(1, request.devicePixelSize.height());

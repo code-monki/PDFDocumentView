@@ -91,8 +91,8 @@ bool PopplerQtDocumentModel::openFile(const QString& path, QString* errorMessage
             m_pageSizes[i] = QSizeF(612.0, 792.0);
             continue;
         }
-        const QRectF r = page->pageRectF(Poppler::Page::CropBox);
-        m_pageSizes[i] = QSizeF(r.width(), r.height());
+        const QSizeF pagePts = page->pageSizeF();
+        m_pageSizes[i] = pagePts;
     }
 
     m_document = doc.release();
@@ -150,8 +150,8 @@ bool PopplerQtDocumentModel::openBuffer(const QByteArray& data, QString* errorMe
             m_pageSizes[i] = QSizeF(612.0, 792.0);
             continue;
         }
-        const QRectF r = page->pageRectF(Poppler::Page::CropBox);
-        m_pageSizes[i] = QSizeF(r.width(), r.height());
+        const QSizeF pagePts = page->pageSizeF();
+        m_pageSizes[i] = pagePts;
     }
 
     m_document = doc.release();
