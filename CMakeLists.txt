@@ -86,10 +86,10 @@ if(PDFDOCUMENTVIEW_RENDER_BACKEND STREQUAL "POPPLER")
         # public headers explicitly so `#include <poppler/qt6/...>` works on Debian/Ubuntu multiarch.
         # Do not pass pkg-config include dirs as PATH roots here: many distros report
         # `-I/usr/include/poppler/qt6`, which makes this search look for
-        # `.../poppler/qt6/poppler/qt6/poppler-document.h` and fail. System prefixes are enough for
-        # `#include <poppler/qt6/poppler-document.h>`.
+        # `.../poppler/qt6/poppler/qt6/poppler-qt6.h` and fail. System prefixes are enough for
+        # `#include <poppler/qt6/poppler-qt6.h>`.
         find_path(PDFDOCUMENTVIEW_POPPLER_QT6_INCLUDE_DIR
-            NAMES poppler/qt6/poppler-document.h
+            NAMES poppler/qt6/poppler-qt6.h
             PATHS
                 /usr/include
                 /usr/local/include
@@ -103,7 +103,7 @@ if(PDFDOCUMENTVIEW_RENDER_BACKEND STREQUAL "POPPLER")
                 "PDFDocumentView: Poppler-Qt6 headers at ${PDFDOCUMENTVIEW_POPPLER_QT6_INCLUDE_DIR}")
         else()
             message(WARNING
-                "PDFDocumentView: could not locate poppler/qt6/poppler-document.h; "
+                "PDFDocumentView: could not locate poppler/qt6/poppler-qt6.h; "
                 "relying on PkgConfig::PdfDocPopplerQt6 include interface only.")
         endif()
         set(PDFDOCUMENTVIEW_HAVE_POPPLER_QT6 TRUE)
@@ -180,9 +180,13 @@ if(PDFDOCUMENTVIEW_INSTALL)
                 get_filename_component(_pdfdocview_pdfium_dll_dir "${_pdfdocview_pdfium_runtime_loc}" DIRECTORY)
                 get_filename_component(_pdfdocview_pdfium_prebuilt_root "${_pdfdocview_pdfium_dll_dir}" DIRECTORY)
                 get_filename_component(_pdfdocview_pdfium_dll_we "${_pdfdocview_pdfium_runtime_loc}" NAME_WE)
-                set(_pdfdocview_pdfium_import_lib "${_pdfdocview_pdfium_prebuilt_root}/lib/${_pdfdocview_pdfium_dll_we}.lib")
+                set(_pdfdocview_pdfium_import_lib "${_pdfdocview_pdfium_prebuilt_root}/lib/${_pdfdocview_pdfium_dll_we}.dll.lib")
+                if(NOT EXISTS "${_pdfdocview_pdfium_import_lib}")
+                    set(_pdfdocview_pdfium_import_lib "${_pdfdocview_pdfium_prebuilt_root}/lib/${_pdfdocview_pdfium_dll_we}.lib")
+                endif()
                 if(EXISTS "${_pdfdocview_pdfium_import_lib}")
-                    set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPLIB_SUBPATH "${CMAKE_INSTALL_LIBDIR}/${_pdfdocview_pdfium_dll_we}.lib")
+                    get_filename_component(_pdfdocview_pdfium_import_lib_name "${_pdfdocview_pdfium_import_lib}" NAME)
+                    set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPLIB_SUBPATH "${CMAKE_INSTALL_LIBDIR}/${_pdfdocview_pdfium_import_lib_name}")
                     set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_HAVE_IMPLIB ON)
                 else()
                     set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_HAVE_IMPLIB OFF)
@@ -192,6 +196,7 @@ if(PDFDOCUMENTVIEW_INSTALL)
                 unset(_pdfdocview_pdfium_prebuilt_root)
                 unset(_pdfdocview_pdfium_dll_we)
                 unset(_pdfdocview_pdfium_import_lib)
+                unset(_pdfdocview_pdfium_import_lib_name)
             endif()
         else()
             set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPORTED_LOCATION_SUBPATH
@@ -264,7 +269,10 @@ if(PDFDOCUMENTVIEW_INSTALL)
                     get_filename_component(_pdfium_dll_dir "${_pdfdocumentview_pdfium_install_runtime}" DIRECTORY)
                     get_filename_component(_pdfium_prebuilt_root "${_pdfium_dll_dir}" DIRECTORY)
                     get_filename_component(_pdfium_dll_we "${_pdfdocumentview_pdfium_install_runtime}" NAME_WE)
-                    set(_pdfium_import_lib "${_pdfium_prebuilt_root}/lib/${_pdfium_dll_we}.lib")
+                    set(_pdfium_import_lib "${_pdfium_prebuilt_root}/lib/${_pdfium_dll_we}.dll.lib")
+                    if(NOT EXISTS "${_pdfium_import_lib}")
+                        set(_pdfium_import_lib "${_pdfium_prebuilt_root}/lib/${_pdfium_dll_we}.lib")
+                    endif()
                     if(EXISTS "${_pdfium_import_lib}")
                         install(
                             FILES "${_pdfium_import_lib}"

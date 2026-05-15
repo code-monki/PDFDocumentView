@@ -199,12 +199,26 @@ if(PDFIUM_INCLUDE_DIR AND PDFIUM_LIBRARY)
     if(NOT EXISTS "${PDFIUM_LIBRARY}")
         message(FATAL_ERROR "PDFDocumentView: PDFIUM_LIBRARY points to a missing file: '${PDFIUM_LIBRARY}'")
     endif()
-    if(WIN32 AND PDFIUM_LIBRARY MATCHES "\\.[Ll][Ii][Bb]$")
+    if(WIN32)
         get_filename_component(_pdfdocumentview_pdfium_imlibdir "${PDFIUM_LIBRARY}" DIRECTORY)
         get_filename_component(_pdfdocumentview_pdfium_layout_root "${_pdfdocumentview_pdfium_imlibdir}" DIRECTORY)
-        if(EXISTS "${_pdfdocumentview_pdfium_layout_root}/bin/pdfium.dll")
+        if(PDFIUM_LIBRARY MATCHES "\\.[Ll][Ii][Bb]$" AND EXISTS "${_pdfdocumentview_pdfium_layout_root}/bin/pdfium.dll")
             set(PDFIUM_RUNTIME_LIBRARY "${_pdfdocumentview_pdfium_layout_root}/bin/pdfium.dll" CACHE FILEPATH
                 "PDFium DLL for runtime/shipping" FORCE)
+        elseif(PDFIUM_LIBRARY MATCHES "\\.[Dd][Ll][Ll]$")
+            set(_pdfdocumentview_pdfium_dll_path "${PDFIUM_LIBRARY}")
+            if(EXISTS "${_pdfdocumentview_pdfium_layout_root}/lib/pdfium.dll.lib")
+                set(PDFIUM_RUNTIME_LIBRARY "${_pdfdocumentview_pdfium_dll_path}" CACHE FILEPATH
+                    "PDFium DLL for runtime/shipping" FORCE)
+                set(PDFIUM_LIBRARY "${_pdfdocumentview_pdfium_layout_root}/lib/pdfium.dll.lib" CACHE FILEPATH
+                    "PDFium MSVC import library" FORCE)
+            elseif(EXISTS "${_pdfdocumentview_pdfium_layout_root}/lib/pdfium.lib")
+                set(PDFIUM_RUNTIME_LIBRARY "${_pdfdocumentview_pdfium_dll_path}" CACHE FILEPATH
+                    "PDFium DLL for runtime/shipping" FORCE)
+                set(PDFIUM_LIBRARY "${_pdfdocumentview_pdfium_layout_root}/lib/pdfium.lib" CACHE FILEPATH
+                    "PDFium MSVC import library" FORCE)
+            endif()
+            unset(_pdfdocumentview_pdfium_dll_path)
         endif()
         unset(_pdfdocumentview_pdfium_imlibdir)
         unset(_pdfdocumentview_pdfium_layout_root)

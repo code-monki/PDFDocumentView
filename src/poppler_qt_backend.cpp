@@ -7,8 +7,7 @@
 
 #include "poppler_qt_document_model.hpp"
 
-#include <poppler/qt6/poppler-document.h>
-#include <poppler/qt6/poppler-page.h>
+#include <poppler/qt6/poppler-qt6.h>
 
 #include <memory>
 
