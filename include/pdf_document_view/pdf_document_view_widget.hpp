@@ -20,6 +20,17 @@
 #include <QByteArray>
 #include <QColor>
 #include <QtGlobal>
+
+#if defined(_WIN32)
+#  if defined(PDFDOCUMENTVIEW_LIBRARY)
+#    define PDFDOCUMENTVIEW_EXPORT Q_DECL_EXPORT
+#  else
+#    define PDFDOCUMENTVIEW_EXPORT Q_DECL_IMPORT
+#  endif
+#else
+#  define PDFDOCUMENTVIEW_EXPORT
+#endif
+
 #include <QEvent>
 #include <QKeyEvent>
 #include <QRect>
@@ -47,7 +58,7 @@ class PdfTileRenderWorker;
  * persistence (`AGENTS.md`). Behavior for rendering threads and tiles is described in
  * `docs/rendering-threading.md`.
  */
-class PdfDocumentViewWidget final : public QAbstractScrollArea {
+class PDFDOCUMENTVIEW_EXPORT PdfDocumentViewWidget final : public QAbstractScrollArea {
     Q_OBJECT
 
 public:

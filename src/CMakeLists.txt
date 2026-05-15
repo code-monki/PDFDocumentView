@@ -41,6 +41,10 @@ target_include_directories(pdf_document_view
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
+if(WIN32)
+    target_compile_definitions(pdf_document_view PRIVATE PDFDOCUMENTVIEW_LIBRARY)
+endif()
+
 target_link_libraries(pdf_document_view PUBLIC Qt6::Widgets)
 
 if(PDFDOCUMENTVIEW_RENDER_BACKEND STREQUAL "PDFIUM")
