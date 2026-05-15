@@ -84,14 +84,20 @@ if(PDFDOCUMENTVIEW_RENDER_BACKEND STREQUAL "POPPLER")
         pkg_check_modules(PdfDocPopplerQt6 REQUIRED IMPORTED_TARGET poppler-qt6)
         # pkgconf sometimes omits "system" -I flags from INTERFACE_INCLUDE_DIRECTORIES. Locate the
         # public headers explicitly so `#include <poppler/qt6/...>` works on Debian/Ubuntu multiarch.
+        # Do not pass pkg-config include dirs as PATH roots here: many distros report
+        # `-I/usr/include/poppler/qt6`, which makes this search look for
+        # `.../poppler/qt6/poppler/qt6/poppler-document.h` and fail. System prefixes are enough for
+        # `#include <poppler/qt6/poppler-document.h>`.
         find_path(PDFDOCUMENTVIEW_POPPLER_QT6_INCLUDE_DIR
             NAMES poppler/qt6/poppler-document.h
-            HINTS ${PdfDocPopplerQt6_INCLUDE_DIRS}
             PATHS
                 /usr/include
                 /usr/local/include
                 /usr/include/x86_64-linux-gnu
-                /usr/include/aarch64-linux-gnu)
+                /usr/include/aarch64-linux-gnu
+                /usr/include/powerpc64le-linux-gnu
+                /usr/include/s390x-linux-gnu
+                /usr/include/riscv64-linux-gnu)
         if(PDFDOCUMENTVIEW_POPPLER_QT6_INCLUDE_DIR)
             message(STATUS
                 "PDFDocumentView: Poppler-Qt6 headers at ${PDFDOCUMENTVIEW_POPPLER_QT6_INCLUDE_DIR}")
@@ -157,31 +163,43 @@ if(PDFDOCUMENTVIEW_INSTALL)
     # pointing at a path we never installed (integrator supplies PDFium).
     if(PDFDOCUMENTVIEW_RENDER_BACKEND STREQUAL "PDFIUM" AND NOT _pdfdocumentview_omit_shipped_pdfium)
         set(PDFDOCUMENTVIEW_CONFIG_HAVE_PDFIUM_RUNTIME ON)
-        get_filename_component(PDFDOCUMENTVIEW_CONFIG_PDFIUM_RUNTIME_FILENAME "${PDFIUM_LIBRARY}" NAME)
-        if(WIN32 AND PDFIUM_LIBRARY MATCHES "\\.[Dd][Ll][Ll]$")
+        if(NOT "${PDFIUM_RUNTIME_LIBRARY}" STREQUAL "")
+            set(_pdfdocview_pdfium_runtime_loc "${PDFIUM_RUNTIME_LIBRARY}")
+        else()
+            set(_pdfdocview_pdfium_runtime_loc "${PDFIUM_LIBRARY}")
+        endif()
+        get_filename_component(PDFDOCUMENTVIEW_CONFIG_PDFIUM_RUNTIME_FILENAME "${_pdfdocview_pdfium_runtime_loc}" NAME)
+        if(WIN32 AND _pdfdocview_pdfium_runtime_loc MATCHES "\\.[Dd][Ll][Ll]$")
             set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPORTED_LOCATION_SUBPATH
                 "${CMAKE_INSTALL_BINDIR}/${PDFDOCUMENTVIEW_CONFIG_PDFIUM_RUNTIME_FILENAME}")
-            get_filename_component(_pdfdocview_pdfium_dll_dir "${PDFIUM_LIBRARY}" DIRECTORY)
-            get_filename_component(_pdfdocview_pdfium_prebuilt_root "${_pdfdocview_pdfium_dll_dir}" DIRECTORY)
-            get_filename_component(_pdfdocview_pdfium_dll_we "${PDFIUM_LIBRARY}" NAME_WE)
-            set(_pdfdocview_pdfium_import_lib "${_pdfdocview_pdfium_prebuilt_root}/lib/${_pdfdocview_pdfium_dll_we}.lib")
-            if(EXISTS "${_pdfdocview_pdfium_import_lib}")
-                set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPLIB_SUBPATH "${CMAKE_INSTALL_LIBDIR}/${_pdfdocview_pdfium_dll_we}.lib")
+            if(PDFIUM_LIBRARY MATCHES "\\.[Ll][Ii][Bb]$" AND EXISTS "${PDFIUM_LIBRARY}")
+                get_filename_component(_pdfdocview_pdfium_implib_name "${PDFIUM_LIBRARY}" NAME)
+                set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPLIB_SUBPATH "${CMAKE_INSTALL_LIBDIR}/${_pdfdocview_pdfium_implib_name}")
                 set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_HAVE_IMPLIB ON)
             else()
-                set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_HAVE_IMPLIB OFF)
-                set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPLIB_SUBPATH "")
+                get_filename_component(_pdfdocview_pdfium_dll_dir "${_pdfdocview_pdfium_runtime_loc}" DIRECTORY)
+                get_filename_component(_pdfdocview_pdfium_prebuilt_root "${_pdfdocview_pdfium_dll_dir}" DIRECTORY)
+                get_filename_component(_pdfdocview_pdfium_dll_we "${_pdfdocview_pdfium_runtime_loc}" NAME_WE)
+                set(_pdfdocview_pdfium_import_lib "${_pdfdocview_pdfium_prebuilt_root}/lib/${_pdfdocview_pdfium_dll_we}.lib")
+                if(EXISTS "${_pdfdocview_pdfium_import_lib}")
+                    set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPLIB_SUBPATH "${CMAKE_INSTALL_LIBDIR}/${_pdfdocview_pdfium_dll_we}.lib")
+                    set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_HAVE_IMPLIB ON)
+                else()
+                    set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_HAVE_IMPLIB OFF)
+                    set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPLIB_SUBPATH "")
+                endif()
+                unset(_pdfdocview_pdfium_dll_dir)
+                unset(_pdfdocview_pdfium_prebuilt_root)
+                unset(_pdfdocview_pdfium_dll_we)
+                unset(_pdfdocview_pdfium_import_lib)
             endif()
-            unset(_pdfdocview_pdfium_dll_dir)
-            unset(_pdfdocview_pdfium_prebuilt_root)
-            unset(_pdfdocview_pdfium_dll_we)
-            unset(_pdfdocview_pdfium_import_lib)
         else()
             set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPORTED_LOCATION_SUBPATH
                 "${CMAKE_INSTALL_LIBDIR}/${PDFDOCUMENTVIEW_CONFIG_PDFIUM_RUNTIME_FILENAME}")
             set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_HAVE_IMPLIB OFF)
             set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPLIB_SUBPATH "")
         endif()
+        unset(_pdfdocview_pdfium_runtime_loc)
     elseif(PDFDOCUMENTVIEW_RENDER_BACKEND STREQUAL "PDFIUM" AND _pdfdocumentview_omit_shipped_pdfium)
         set(PDFDOCUMENTVIEW_CONFIG_HAVE_PDFIUM_RUNTIME OFF)
         set(PDFDOCUMENTVIEW_CONFIG_PDFIUM_IMPORTED_LOCATION_SUBPATH "")
@@ -225,34 +243,48 @@ if(PDFDOCUMENTVIEW_INSTALL)
         # Windows prebuilts ship the DLL under `bin/`; consumers expect runtime DLLs in `bin`
         # and the MSVC import library under `lib/`. Unix keeps the shared object in `lib/`.
         if(NOT _pdfdocumentview_omit_shipped_pdfium)
-            if(WIN32 AND PDFIUM_LIBRARY MATCHES "\\.[Dd][Ll][Ll]$")
+            if(NOT "${PDFIUM_RUNTIME_LIBRARY}" STREQUAL "")
+                set(_pdfdocumentview_pdfium_install_runtime "${PDFIUM_RUNTIME_LIBRARY}")
+            else()
+                set(_pdfdocumentview_pdfium_install_runtime "${PDFIUM_LIBRARY}")
+            endif()
+            if(WIN32 AND _pdfdocumentview_pdfium_install_runtime MATCHES "\\.[Dd][Ll][Ll]$")
                 install(
-                    FILES "${PDFIUM_LIBRARY}"
+                    FILES "${_pdfdocumentview_pdfium_install_runtime}"
                     DESTINATION "${CMAKE_INSTALL_BINDIR}"
                     COMPONENT PDFDocumentView_PdfiumRuntime
                 )
-                get_filename_component(_pdfium_dll_dir "${PDFIUM_LIBRARY}" DIRECTORY)
-                get_filename_component(_pdfium_prebuilt_root "${_pdfium_dll_dir}" DIRECTORY)
-                get_filename_component(_pdfium_dll_we "${PDFIUM_LIBRARY}" NAME_WE)
-                set(_pdfium_import_lib "${_pdfium_prebuilt_root}/lib/${_pdfium_dll_we}.lib")
-                if(EXISTS "${_pdfium_import_lib}")
+                if(PDFIUM_LIBRARY MATCHES "\\.[Ll][Ii][Bb]$" AND EXISTS "${PDFIUM_LIBRARY}")
                     install(
-                        FILES "${_pdfium_import_lib}"
+                        FILES "${PDFIUM_LIBRARY}"
                         DESTINATION "${CMAKE_INSTALL_LIBDIR}"
                         COMPONENT PDFDocumentView_Development
                     )
+                else()
+                    get_filename_component(_pdfium_dll_dir "${_pdfdocumentview_pdfium_install_runtime}" DIRECTORY)
+                    get_filename_component(_pdfium_prebuilt_root "${_pdfium_dll_dir}" DIRECTORY)
+                    get_filename_component(_pdfium_dll_we "${_pdfdocumentview_pdfium_install_runtime}" NAME_WE)
+                    set(_pdfium_import_lib "${_pdfium_prebuilt_root}/lib/${_pdfium_dll_we}.lib")
+                    if(EXISTS "${_pdfium_import_lib}")
+                        install(
+                            FILES "${_pdfium_import_lib}"
+                            DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+                            COMPONENT PDFDocumentView_Development
+                        )
+                    endif()
+                    unset(_pdfium_dll_dir)
+                    unset(_pdfium_prebuilt_root)
+                    unset(_pdfium_dll_we)
+                    unset(_pdfium_import_lib)
                 endif()
-                unset(_pdfium_dll_dir)
-                unset(_pdfium_prebuilt_root)
-                unset(_pdfium_dll_we)
-                unset(_pdfium_import_lib)
             else()
                 install(
-                    FILES "${PDFIUM_LIBRARY}"
+                    FILES "${_pdfdocumentview_pdfium_install_runtime}"
                     DESTINATION "${CMAKE_INSTALL_LIBDIR}"
                     COMPONENT PDFDocumentView_PdfiumRuntime
                 )
             endif()
+            unset(_pdfdocumentview_pdfium_install_runtime)
         endif()
         install(
             FILES

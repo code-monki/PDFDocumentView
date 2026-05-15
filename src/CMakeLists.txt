@@ -49,20 +49,26 @@ if(PDFDOCUMENTVIEW_RENDER_BACKEND STREQUAL "PDFIUM")
         PDFDOCUMENTVIEW_ASYNC_TILE_WORKER=1)
     target_include_directories(pdf_document_view PRIVATE "${PDFIUM_INCLUDE_DIR}")
     target_link_libraries(pdf_document_view PRIVATE "${PDFIUM_LIBRARY}")
+    if(NOT "${PDFIUM_RUNTIME_LIBRARY}" STREQUAL "")
+        set(_pdfdocumentview_pdfium_runtime_file "${PDFIUM_RUNTIME_LIBRARY}")
+    else()
+        set(_pdfdocumentview_pdfium_runtime_file "${PDFIUM_LIBRARY}")
+    endif()
     if(UNIX)
         set_target_properties(pdf_document_view PROPERTIES
             BUILD_RPATH "$ORIGIN"
             INSTALL_RPATH "$ORIGIN")
     endif()
-    get_filename_component(_pdfdocumentview_pdfium_copy_name "${PDFIUM_LIBRARY}" NAME)
+    get_filename_component(_pdfdocumentview_pdfium_copy_name "${_pdfdocumentview_pdfium_runtime_file}" NAME)
     add_custom_command(
         TARGET pdf_document_view
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${PDFIUM_LIBRARY}"
+            "${_pdfdocumentview_pdfium_runtime_file}"
             "$<TARGET_FILE_DIR:pdf_document_view>/${_pdfdocumentview_pdfium_copy_name}"
         VERBATIM
         COMMENT "Stage libpdfium next to pdf_document_view for runtime resolution")
+    unset(_pdfdocumentview_pdfium_runtime_file)
     if(APPLE)
         add_custom_command(
             TARGET pdf_document_view

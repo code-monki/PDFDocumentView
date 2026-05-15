@@ -70,7 +70,9 @@ set(_pdfdocumentview_pdfium_win_arm64_sha256
     "6a60c3dc5ca7ac1afe53c83e07fe3f6747b48e30723fa4917bdf3ea59436e5a6")
 
 set(PDFIUM_INCLUDE_DIR "" CACHE PATH "Directory containing PDFium public headers (fpdfview.h).")
-set(PDFIUM_LIBRARY "" CACHE FILEPATH "Path to libpdfium shared library.")
+set(PDFIUM_LIBRARY "" CACHE FILEPATH "Path to libpdfium shared library (import .lib on Windows MSVC when available).")
+set(PDFIUM_RUNTIME_LIBRARY "" CACHE FILEPATH
+    "PDFium loadable module at runtime (.dll/.so/.dylib). Defaults to PDFIUM_LIBRARY when empty.")
 set(PDFIUM_ROOT "" CACHE PATH
     "Root of an extracted pdfium-binaries layout (include/ + lib/). Overrides fetch when set.")
 
@@ -83,13 +85,25 @@ function(_pdfdocumentview_apply_pdfium_root root_dir)
     elseif(UNIX AND NOT APPLE AND EXISTS "${root_dir}/lib/libpdfium.so")
         set(_lib "${root_dir}/lib/libpdfium.so")
     elseif(WIN32 AND EXISTS "${root_dir}/bin/pdfium.dll")
-        set(_lib "${root_dir}/bin/pdfium.dll")
+        set(_pdfdocumentview_pdfium_dll "${root_dir}/bin/pdfium.dll")
+        if(EXISTS "${root_dir}/lib/pdfium.lib")
+            set(_lib "${root_dir}/lib/pdfium.lib")
+        else()
+            set(_lib "${_pdfdocumentview_pdfium_dll}")
+        endif()
     else()
         message(FATAL_ERROR
             "PDFDocumentView: PDFIUM_ROOT='${root_dir}' — expected libpdfium under lib/ (or pdfium.dll under bin/ on Windows).")
     endif()
     set(PDFIUM_INCLUDE_DIR "${root_dir}/include" CACHE PATH "PDFium headers directory" FORCE)
     set(PDFIUM_LIBRARY "${_lib}" CACHE FILEPATH "PDFium shared library" FORCE)
+    if(WIN32 AND EXISTS "${root_dir}/bin/pdfium.dll")
+        set(PDFIUM_RUNTIME_LIBRARY "${root_dir}/bin/pdfium.dll" CACHE FILEPATH
+            "PDFium DLL for runtime/shipping" FORCE)
+    else()
+        set(PDFIUM_RUNTIME_LIBRARY "${_lib}" CACHE FILEPATH
+            "PDFium runtime shared library" FORCE)
+    endif()
     if(EXISTS "${root_dir}/LICENSE")
         set(PDFIUM_PREBUILT_LICENSE_FILE "${root_dir}/LICENSE" CACHE FILEPATH
             "LICENSE from the PDFium binary drop (e.g. bblanchon/pdfium-binaries)" FORCE)
@@ -185,6 +199,20 @@ if(PDFIUM_INCLUDE_DIR AND PDFIUM_LIBRARY)
     if(NOT EXISTS "${PDFIUM_LIBRARY}")
         message(FATAL_ERROR "PDFDocumentView: PDFIUM_LIBRARY points to a missing file: '${PDFIUM_LIBRARY}'")
     endif()
+    if(WIN32 AND PDFIUM_LIBRARY MATCHES "\\.[Ll][Ii][Bb]$")
+        get_filename_component(_pdfdocumentview_pdfium_imlibdir "${PDFIUM_LIBRARY}" DIRECTORY)
+        get_filename_component(_pdfdocumentview_pdfium_layout_root "${_pdfdocumentview_pdfium_imlibdir}" DIRECTORY)
+        if(EXISTS "${_pdfdocumentview_pdfium_layout_root}/bin/pdfium.dll")
+            set(PDFIUM_RUNTIME_LIBRARY "${_pdfdocumentview_pdfium_layout_root}/bin/pdfium.dll" CACHE FILEPATH
+                "PDFium DLL for runtime/shipping" FORCE)
+        endif()
+        unset(_pdfdocumentview_pdfium_imlibdir)
+        unset(_pdfdocumentview_pdfium_layout_root)
+    endif()
+    if("${PDFIUM_RUNTIME_LIBRARY}" STREQUAL "")
+        set(PDFIUM_RUNTIME_LIBRARY "${PDFIUM_LIBRARY}" CACHE FILEPATH
+            "PDFium runtime shared library" FORCE)
+    endif()
     unset(PDFIUM_PREBUILT_LICENSE_FILE CACHE)
     message(STATUS "PDFDocumentView: PDFium from cache (PDFIUM_INCLUDE_DIR / PDFIUM_LIBRARY)")
 elseif(PDFIUM_ROOT)
@@ -255,9 +283,16 @@ else()
 endif()
 
 add_library(PDFDocumentView::PDFium SHARED IMPORTED GLOBAL)
-set_target_properties(PDFDocumentView::PDFium PROPERTIES
-    IMPORTED_LOCATION "${PDFIUM_LIBRARY}"
-    INTERFACE_INCLUDE_DIRECTORIES "${PDFIUM_INCLUDE_DIR}")
+if(WIN32 AND PDFIUM_RUNTIME_LIBRARY MATCHES "\\.[Dd][Ll][Ll]$" AND PDFIUM_LIBRARY MATCHES "\\.[Ll][Ii][Bb]$")
+    set_target_properties(PDFDocumentView::PDFium PROPERTIES
+        IMPORTED_LOCATION "${PDFIUM_RUNTIME_LIBRARY}"
+        IMPORTED_IMPLIB "${PDFIUM_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${PDFIUM_INCLUDE_DIR}")
+else()
+    set_target_properties(PDFDocumentView::PDFium PROPERTIES
+        IMPORTED_LOCATION "${PDFIUM_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${PDFIUM_INCLUDE_DIR}")
+endif()
 message(STATUS
     "PDFDocumentView: optional imported target PDFDocumentView::PDFium defined "
     "(integrators may link it explicitly; the library links the resolved PDFium shared library privately).")
