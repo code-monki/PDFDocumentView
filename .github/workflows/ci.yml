@@ -134,20 +134,42 @@ jobs:
             ${EXTRA_FLAGS}
 
       - name: Build
-        run: cmake --build build --parallel
+        run: |
+          set -euo pipefail
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cmake --build build --parallel --config Release
+          else
+            cmake --build build --parallel
+          fi
+
 
       - name: Test
         env:
           QT_QPA_PLATFORM: minimal
-        run: ctest --test-dir build --output-on-failure
+        run: |
+          set -euo pipefail
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            ctest --test-dir build --output-on-failure -C Release
+          else
+            ctest --test-dir build --output-on-failure
+          fi
 
       - name: Install-tree CMake consumer smoke
         run: |
-          cmake --install build --prefix "$GITHUB_WORKSPACE/install-stage"
+          set -euo pipefail
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cmake --install build --prefix "$GITHUB_WORKSPACE/install-stage" --config Release
+          else
+            cmake --install build --prefix "$GITHUB_WORKSPACE/install-stage"
+          fi
           cmake -S tests/cmake_consumer_smoke -B consumer-build \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/install-stage;${QT_ROOT_DIR}"
-          cmake --build consumer-build
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cmake --build consumer-build --config Release
+          else
+            cmake --build consumer-build
+          fi
 
   # Prove PDFIUM resolves without CMake fetch (air-gapped / policy path): cache the
   # same pinned bblanchon tarball as cmake/PdfiumPrebuilt.cmake (linux x64).
