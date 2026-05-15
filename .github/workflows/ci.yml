@@ -149,6 +149,9 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ runner.os }}" = "Windows" ]; then
+            # MSVC loads dependent DLLs (Qt + pdf_document_view + pdfium) via PATH; build outputs
+            # live under per-config directories (e.g. build/src/Release).
+            export PATH="$QT_ROOT_DIR/bin:$GITHUB_WORKSPACE/build/src/Release:$PATH"
             ctest --test-dir build --output-on-failure -C Release
           else
             ctest --test-dir build --output-on-failure
